@@ -10,9 +10,14 @@ class NetheriteBot(BotAI):
         print(f"Iteration: {iteration}!")
 
         if self.townhalls:
-            nexus = self.townhalls.random
-            if nexus.is_idle and self.can_afford(UnitTypeId.SCV):
-                nexus.train(UnitTypeId.SCV)
+            commandcenter = self.townhalls.random
+            if commandcenter.is_idle and self.can_afford(UnitTypeId.SCV):
+                commandcenter.train(UnitTypeId.SCV)
+
+        else:
+            if self.can_afford(UnitTypeId.COMMANDCENTER):
+                await self.expand_now()
+
 
 sc2.run_game(
     sc2.maps.get("Starlight"),
