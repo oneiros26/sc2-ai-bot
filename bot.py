@@ -18,7 +18,7 @@ class NetheriteBot(BotAI):
             commandcenter = self.townhalls.random
 
             # pokud mame 22 pracovniku nevytvarej dalsi
-            if commandcenter.is_idle and self.can_afford(UnitTypeId.SCV) and self.units(UnitTypeId.SCV) < 23:
+            if commandcenter.is_idle and self.can_afford(UnitTypeId.SCV) and self.units(UnitTypeId.SCV) <= 22:
                 commandcenter.train(UnitTypeId.SCV)
 
             # pokud nemame supply depot tak ho postav blizko commandcentru
@@ -26,7 +26,7 @@ class NetheriteBot(BotAI):
                 if self.can_afford(UnitTypeId.SUPPLYDEPOT):
                     await self.build(UnitTypeId.SUPPLYDEPOT, near=commandcenter)
 
-            # postav 5 supply depotu v retezu zmerem k nepriteli abychom se nezablokovali
+            # pokud mame min nez 5 supply depotu, tak ho postav smerem k nepriteli
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 5:
                 if self.can_afford(UnitTypeId.SUPPLYDEPOT):
                     # vyber supply depot co je nejblize k nepriteli
@@ -35,7 +35,7 @@ class NetheriteBot(BotAI):
                     pos = target_supplydepot.position.towards(self.enemy_start_locations[0], random.randrange(8, 15))
                     await self.build(UnitTypeId.SUPPLYDEPOT, near=pos)
 
-        # pokud mame dost penez na command center tak ho postav
+        # pokud nemame commandcenter a mame na nej penize, tak ho postav
         else:
             if self.can_afford(UnitTypeId.COMMANDCENTER):
                 await self.expand_now()
