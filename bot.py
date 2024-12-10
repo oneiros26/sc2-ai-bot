@@ -65,10 +65,8 @@ class TerranBot(BotAI):
             elif not self.structures(UnitTypeId.ORBITALCOMMAND) and self.can_afford(UnitTypeId.ORBITALCOMMAND) and self.structures(UnitTypeId.BARRACKSREACTOR):
                 townhall.build(UnitTypeId.ORBITALCOMMAND)
 
-
-            # HROZNA MRDKA TOHLE UZ NECHCI
             # postav dalsi COMMAND CENTER na dalsi resources a expanzi baseky
-            elif self.can_afford(UnitTypeId.COMMANDCENTER) and self.already_pending(UnitTypeId.ORBITALCOMMAND) or self.structures(UnitTypeId.ORBITALCOMMAND):
+            elif self.can_afford(UnitTypeId.COMMANDCENTER) and (townhall.is_active or (self.structures(UnitTypeId.ORBITALCOMMAND) and not self.structures(UnitTypeId.COMMANDCENTER))):
                 expansion_location = await self.get_next_expansion()
                 if expansion_location:
                     builder = self.workers.closest_to(expansion_location)
@@ -105,7 +103,7 @@ class TerranBot(BotAI):
                 await self.expand_now()
 
 run_game(
-     sc2.maps.get("Starlight"),
+     sc2.maps.get("Equilibrium513AIE"),
     [Bot(Race.Terran, TerranBot()), Computer(Race.Protoss, Difficulty.VeryEasy)],
     realtime = False
 )
