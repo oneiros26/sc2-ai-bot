@@ -1,5 +1,6 @@
 import sc2
 from sc2.bot_ai import BotAI
+from sc2.ids.ability_id import AbilityId
 from sc2.main import run_game
 from sc2.player import Bot, Computer
 from sc2 import maps
@@ -66,7 +67,7 @@ class TerranBot(BotAI):
                 townhall.build(UnitTypeId.ORBITALCOMMAND)
 
             # postav dalsi COMMAND CENTER na dalsi resources a expanzi baseky
-            elif self.can_afford(UnitTypeId.COMMANDCENTER) and (townhall.is_active or (self.structures(UnitTypeId.ORBITALCOMMAND) and not self.structures(UnitTypeId.COMMANDCENTER))):
+            elif self.can_afford(UnitTypeId.COMMANDCENTER) and ((self.structures(UnitTypeId.COMMANDCENTER).amount == 1 and not self.structures(UnitTypeId.ORBITALCOMMAND)) or (self.structures(UnitTypeId.ORBITALCOMMAND) and self.structures(UnitTypeId.COMMANDCENTER).amount == 0)):
                 expansion_location = await self.get_next_expansion()
                 if expansion_location:
                     builder = self.workers.closest_to(expansion_location)
@@ -90,8 +91,8 @@ class TerranBot(BotAI):
 
             # postav BUNKER
             #elif not self.structures(UnitTypeId.BUNKER) and self.already_pending(UnitTypeId.BUNKER) == 0 and self.can_afford(UnitTypeId.BUNKER) and total_marines >= 2:
-                #target_commandcenter = self.structures(UnitTypeId.COMMANDCENTER).closest_to(self.enemy_start_locations[0])
-                #pos = target_commandcenter.position.towards(self.enemy_start_locations[0], 7)
+                #target_bunker = self.structures(UnitTypeId.BUNKER).closest_to(self.enemy_start_locations[0])
+                #pos = target_bunker.position.towards(self.enemy_start_locations[0], 7)
                 #await self.build(UnitTypeId.BUNKER, near=pos)
 
 
