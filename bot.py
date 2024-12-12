@@ -68,11 +68,12 @@ class TerranBot(BotAI):
 
             # postav BARRACKS REACTOR [19] [1:33 ; 1:26] +7
             elif not self.structures(UnitTypeId.BARRACKSREACTOR) and not self.already_pending(UnitTypeId.BARRACKSREACTOR) and self.can_afford(UnitTypeId.BARRACKSREACTOR) and self.structures(UnitTypeId.BARRACKS):
-                barracks = self.structures(UnitTypeId.BARRACKS).ready.first
-                if not barracks:
-                    pass
-                else:
-                    barracks.build(UnitTypeId.BARRACKSREACTOR)
+                if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
+                    barracks = self.structures(UnitTypeId.BARRACKS).ready.first
+                    if not barracks:
+                        pass
+                    else:
+                        barracks.build(UnitTypeId.BARRACKSREACTOR)
 
             # postav dalsi COMMAND CENTER [19] [1:44 ; 1:38] +6
             elif self.can_afford(UnitTypeId.COMMANDCENTER) and self.structures(UnitTypeId.BARRACKSREACTOR) and ((self.structures(UnitTypeId.COMMANDCENTER).amount == 1 and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 0) or (self.structures(UnitTypeId.ORBITALCOMMAND).amount == 1 and self.structures(UnitTypeId.COMMANDCENTER).amount == 0)):
@@ -126,12 +127,17 @@ class TerranBot(BotAI):
                     barracks.train(UnitTypeId.MARINE)
 
             # postav BARRACKS TECH LAB [33] [0:00 ; 0:00]
-            elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 2:
-                barracks = self.structures(UnitTypeId.BARRACKS).ready.first
-                if not barracks:
-                    pass
-                else:
-                    barracks.build(UnitTypeId.BARRACKSTECHLAB)
+            elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 2 and not self.structures(UnitTypeId.BARRACKSTECHLAB):
+                if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
+                    barracks = self.structures(UnitTypeId.BARRACKS).ready.first
+                    if not barracks:
+                        pass
+                    else:
+                        barracks.build(UnitTypeId.BARRACKSTECHLAB)
+
+            # postav SUPPLY DEPOT
+            elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 3 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.BARRACKSTECHLAB):
+                await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
 
 
 
