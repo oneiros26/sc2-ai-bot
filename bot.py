@@ -125,6 +125,13 @@ class TerranBot(BotAI):
                 for barracks in barracks_ready:
                     barracks.train(UnitTypeId.MARINE)
 
+            # postav BARRACKS TECH LAB [33] [0:00 ; 0:00]
+            elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 2:
+                barracks = self.structures(UnitTypeId.BARRACKS).ready.first
+                if not barracks:
+                    pass
+                else:
+                    barracks.build(UnitTypeId.BARRACKSTECHLAB)
 
 
 
