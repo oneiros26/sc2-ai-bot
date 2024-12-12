@@ -126,7 +126,7 @@ class TerranBot(BotAI):
                 for barracks in barracks_ready:
                     barracks.train(UnitTypeId.MARINE)
 
-            # postav BARRACKS TECH LAB [33] [0:00 ; 0:00]
+            # postav BARRACKS TECH LAB [33] [0:00 ; 3:10]
             elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 2 and not self.structures(UnitTypeId.BARRACKSTECHLAB):
                 if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
                     barracks = self.structures(UnitTypeId.BARRACKS).ready.first
@@ -135,9 +135,27 @@ class TerranBot(BotAI):
                     else:
                         barracks.build(UnitTypeId.BARRACKSTECHLAB)
 
-            # postav SUPPLY DEPOT
+            # postav SUPPLY DEPOT [33] [0:00 ; 3:11]
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 3 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.BARRACKSTECHLAB):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
+
+            # vycvic 2 MARINES [34]
+            elif self.can_afford(UnitTypeId.MARINE) and total_marines < 10 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 3:
+                barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
+                for barracks in barracks_ready:
+                    barracks.train(UnitTypeId.MARINE)
+
+            # postav BARRACKS TECH LAB [34] [0:00 ; 3:18]
+            elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and total_marines >= 10 and self.structures(UnitTypeId.BARRACKSTECHLAB).amount < 2:
+                if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
+                    barracks = self.structures(UnitTypeId.BARRACKS).ready.first
+                    if not barracks:
+                        pass
+                    else:
+                        barracks.build(UnitTypeId.BARRACKSTECHLAB)
+
+            # 
+
 
 
 
@@ -149,6 +167,6 @@ class TerranBot(BotAI):
 
 run_game(
      sc2.maps.get("Equilibrium513AIE"),
-    [Bot(Race.Terran, TerranBot()), Computer(Race.Protoss, Difficulty.VeryHard)],
+    [Bot(Race.Terran, TerranBot()), Computer(Race.Protoss, Difficulty.VeryEasy)],
     realtime = False
 )
