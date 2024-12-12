@@ -111,12 +111,12 @@ class TerranBot(BotAI):
                     barracks.train(UnitTypeId.MARINE)
 
             # postav 2 BARRACKS [26] [2:23 ; 2:23] +0
-            elif self.structures(UnitTypeId.BARRACKS).amount < 3 and self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BUNKER):
+            elif self.structures(UnitTypeId.BARRACKS).amount < 3 and not self.already_pending(UnitTypeId.BARRACKS) and self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BUNKER):
                 target_barracks = self.structures(UnitTypeId.BARRACKS).random
                 await self.build(UnitTypeId.BARRACKS, near=target_barracks)
 
             # vylepsi second COMMAND CENTER na ORBITAL COMMAND [29] [3:03 ; 2:50] +12
-            elif self.can_afford(UnitTypeId.ORBITALCOMMAND) and self.structures(UnitTypeId.BARRACKS).amount == 3 and self.structures(UnitTypeId.ORBITALCOMMAND).amount < 2 and not townhall_2.orders:
+            elif self.can_afford(UnitTypeId.ORBITALCOMMAND) and (self.structures(UnitTypeId.BARRACKS).amount >= 2 or self.structures(UnitTypeId.BARRACKSREACTOR).amount >= 1) and self.structures(UnitTypeId.ORBITALCOMMAND).amount < 2 and not townhall_2.orders:
                 townhall_2.build(UnitTypeId.ORBITALCOMMAND)
 
             # vycvic 4 MARINES [30]
