@@ -185,9 +185,46 @@ class TerranBot(BotAI):
                 pos = target_barracks.position.towards(townhall_2, 5)
                 await self.build(UnitTypeId.BARRACKS, pos)
 
+            #74 [5:18]
 
 
-            # research stimpack a combat shield (musi to byt odelene tady vpici nech to tady) ----nesahat
+
+
+
+
+
+
+
+            #DEFEND            funguje zatim spatne jen pro zacatek
+            # Check if the enemy is attacking or there are enemy units near
+            if self.enemy_units.exists or self.enemy_structures.exists:
+                # Gather all available Marines
+                marines = self.units(UnitTypeId.MARINE).ready
+                if marines:
+                    # Get the enemy position (you can also use a specific enemy unit, structure, or location)
+                    enemy_position = self.enemy_units.closest_to(
+                        self.start_location).position if self.enemy_units else self.enemy_structures.closest_to(
+                        self.start_location).position
+
+                    # Move the Marines to the enemy location
+                    for marine in marines:
+                        # Move the Marines towards the enemy location
+                        self.do(marine.move(enemy_position))
+
+                    # Optionally, command the Marines to attack the enemy
+                    # If we want them to automatically attack when in range
+                    for marine in marines:
+                        self.do(marine.attack(enemy_position))
+                    print("Marines gathered to defend.")
+
+
+
+
+
+
+
+
+            # research stimpack a combat shield          tohle tu nech!!!!!!!!! nesahat
             if self.structures(UnitTypeId.BARRACKSTECHLAB).amount == 1:
                 for barracks in self.structures(UnitTypeId.BARRACKS).ready:
                     if barracks.has_add_on:
@@ -204,6 +241,7 @@ class TerranBot(BotAI):
                                 if not self.already_pending_upgrade(UpgradeId.STIMPACK):
                                     self.do(add_on(AbilityId.BARRACKSTECHLABRESEARCH_STIMPACK))
                                     self.do(add_on(AbilityId.RESEARCH_COMBATSHIELD))
+
         # pokud nemame townhall a mame na nej penize, tak ho postav
         else:
             if self.can_afford(UnitTypeId.COMMANDCENTER):
