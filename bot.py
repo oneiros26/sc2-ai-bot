@@ -33,20 +33,12 @@ class TerranBot(BotAI):
             townhall = self.townhalls.closest_to(self.start_location)
             townhall_2 = self.townhalls.furthest_to(self.start_location)
 
-            # vycvic 2 SCV [12]
-            if self.can_afford(UnitTypeId.SCV) and total_workers < 14:
-                townhall.train(UnitTypeId.SCV)
-
             # postav SUPPLY DEPOT [14] [0:20 ; 0:17] +3
-            elif not self.structures(UnitTypeId.SUPPLYDEPOT) and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and total_workers >= 14:
+            if not self.structures(UnitTypeId.SUPPLYDEPOT) and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=close_ramp_depot)
 
-            # vycvic SCV [14]
-            elif self.can_afford(UnitTypeId.SCV) and total_workers < 15 and self.structures(UnitTypeId.SUPPLYDEPOT):
-                townhall.train(UnitTypeId.SCV)
-
             # postav BARRACKS [15] [0:44 ; 0:39] +4
-            elif not self.structures(UnitTypeId.BARRACKS) and self.already_pending(UnitTypeId.BARRACKS) == 0 and self.can_afford(UnitTypeId.BARRACKS) and total_workers >= 15:
+            elif not self.structures(UnitTypeId.BARRACKS) and self.already_pending(UnitTypeId.BARRACKS) == 0 and self.can_afford(UnitTypeId.BARRACKS):
                 pos = townhall.position.towards(self.enemy_start_locations[0], 7)
                 await self.build(UnitTypeId.BARRACKS, pos)
 
@@ -64,10 +56,6 @@ class TerranBot(BotAI):
                 refinery = self.structures(UnitTypeId.REFINERY).ready.first
                 scv_gas = self.units(UnitTypeId.SCV).first
                 scv_gas.gather(refinery)
-
-            # vycvic SCV [15]
-            elif self.can_afford(UnitTypeId.SCV) and total_workers < 19 and self.structures(UnitTypeId.SUPPLYDEPOT):
-                townhall.train(UnitTypeId.SCV)
 
             # postav BARRACKS REACTOR [19] [1:33 ; 1:26] +7
             elif not self.structures(UnitTypeId.BARRACKSREACTOR) and not self.already_pending(UnitTypeId.BARRACKSREACTOR) and self.can_afford(UnitTypeId.BARRACKSREACTOR) and self.structures(UnitTypeId.BARRACKS):
@@ -95,10 +83,6 @@ class TerranBot(BotAI):
             # postav SUPPLY DEPOT [19] [1:50 ; 1:47] +3
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount == 1 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and townhall != townhall_2:
                 await self.build(UnitTypeId.SUPPLYDEPOT, far_ramp_depot)
-
-            # vycvic 3 SCV [19]
-            elif self.can_afford(UnitTypeId.SCV) and total_workers < 22 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 2:
-                townhall.train(UnitTypeId.SCV)
 
             # vycvic 2 MARINES [20]
             elif self.can_afford(UnitTypeId.MARINE) and total_marines < 2 and self.structures(UnitTypeId.BARRACKSREACTOR):
@@ -146,11 +130,6 @@ class TerranBot(BotAI):
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 3 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.BARRACKSTECHLAB):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
 
-            # vycvic SCV
-            elif self.can_afford(UnitTypeId.SCV) and total_workers < 22 and self.structures(UnitTypeId.SUPPLYDEPOT).amount >= 3:
-                townhall_2.train(UnitTypeId.SCV)
-                townhall.train(UnitTypeId.SCV)
-
             # vycvic 2 MARINES [34]
             elif self.can_afford(UnitTypeId.MARINE) and total_marines < 10 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 3:
                 barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
@@ -188,6 +167,13 @@ class TerranBot(BotAI):
                 target_barracks = self.structures(UnitTypeId.BARRACKS).furthest_to(self.start_location)
                 pos = target_barracks.position.towards(townhall_2, 5)
                 await self.build(UnitTypeId.BARRACKS, pos)
+
+            elif self.can_afford(UnitTypeId.SCV) and total_workers < 32:
+                if not self.already_pending(UnitTypeId.SCV) and townhall != townhall_2:
+                    townhall.train(UnitTypeId.SCV)
+                    townhall_2.train(UnitTypeId.SCV)
+                elif not self.already_pending(UnitTypeId.SCV):
+                    townhall.train(UnitTypeId.SCV)
 
 
 
