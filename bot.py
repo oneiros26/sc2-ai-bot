@@ -60,7 +60,7 @@ class TerranBot(BotAI):
             # postav BARRACKS REACTOR [19] [1:33 ; 1:26] +7
             elif not self.structures(UnitTypeId.BARRACKSREACTOR) and not self.already_pending(UnitTypeId.BARRACKSREACTOR) and self.can_afford(UnitTypeId.BARRACKSREACTOR) and self.structures(UnitTypeId.BARRACKS):
                 try:
-                    if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
+                    if self.structures(UnitTypeId.BARRACKS).ready.exists:
                         barracks = self.structures(UnitTypeId.BARRACKS).ready.first
                         if not barracks:
                             pass
@@ -92,7 +92,7 @@ class TerranBot(BotAI):
 
             # postav BUNKER [23] [2:18 ; 2:15] +3
             elif not self.structures(UnitTypeId.BUNKER) and self.already_pending(UnitTypeId.BUNKER) == 0 and self.can_afford(UnitTypeId.BUNKER) and total_marines >= 2:
-                pos = townhall_2.position.towards(self.enemy_start_locations[0], 5)
+                pos = townhall_2.position.towards(self.enemy_start_locations[0], 4)
                 await self.build(UnitTypeId.BUNKER, pos)
 
             # vycvic 4 MARINES [23]
@@ -102,9 +102,14 @@ class TerranBot(BotAI):
                     barracks.train(UnitTypeId.MARINE)
 
             # postav 2 BARRACKS [26] [2:23 ; 2:23] +0
-            elif self.structures(UnitTypeId.BARRACKS).amount < 3 and not self.already_pending(UnitTypeId.BARRACKS) and self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BUNKER):
+            elif self.structures(UnitTypeId.BARRACKS).amount < 2 and not self.already_pending(UnitTypeId.BARRACKS) and self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BUNKER):
                 target_barracks = self.structures(UnitTypeId.BARRACKS).random
                 pos = target_barracks.position.towards(self.enemy_start_locations[0], 5)
+                await self.build(UnitTypeId.BARRACKS, pos)
+
+            elif self.structures(UnitTypeId.BARRACKS).amount == 2 and not self.already_pending(UnitTypeId.BARRACKS) and self.can_afford(UnitTypeId.BARRACKS):
+                target_barracks = self.structures(UnitTypeId.BARRACKS).random
+                pos = target_barracks.position.towards(close_ramp_depot, 5)
                 await self.build(UnitTypeId.BARRACKS, pos)
 
             # vylepsi second COMMAND CENTER na ORBITAL COMMAND [29] [3:03 ; 2:50] +12
@@ -119,7 +124,7 @@ class TerranBot(BotAI):
 
             # postav BARRACKS TECH LAB [33] [0:00 ; 3:10]
             elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 2 and not self.structures(UnitTypeId.BARRACKSTECHLAB):
-                if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
+                if self.structures(UnitTypeId.BARRACKS).ready.exists:
                     barracks = self.structures(UnitTypeId.BARRACKS).ready.first
                     if not barracks:
                         pass
@@ -138,7 +143,7 @@ class TerranBot(BotAI):
 
             # postav BARRACKS TECH LAB [34] [0:00 ; 3:18]
             elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and total_marines >= 10 and self.structures(UnitTypeId.BARRACKSTECHLAB).amount < 2:
-                if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
+                if self.structures(UnitTypeId.BARRACKS).ready.exists:
                     barracks = self.structures(UnitTypeId.BARRACKS).ready.first
                     if not barracks:
                         pass
@@ -156,7 +161,8 @@ class TerranBot(BotAI):
 
             # postav FACTORY [63] [0:00 ; 4:33]
             elif self.can_afford(UnitTypeId.FACTORY) and not self.structures(UnitTypeId.FACTORY) and self.structures(UnitTypeId.REFINERY).amount == 3 and not self.already_pending(UnitTypeId.FACTORY):
-                await self.build(UnitTypeId.FACTORY, near=townhall_2)
+                pos = townhall_2.position.towards(self.enemy_start_locations[0], 10)
+                await self.build(UnitTypeId.FACTORY, pos)
 
             # postav ENGINEERING BAY [66] [0:00 ; 4:44]
             elif self.can_afford(UnitTypeId.ENGINEERINGBAY) and not self.structures(UnitTypeId.ENGINEERINGBAY) and self.structures(UnitTypeId.FACTORY) and not self.already_pending(UnitTypeId.ENGINEERINGBAY):
@@ -167,6 +173,17 @@ class TerranBot(BotAI):
                 target_barracks = self.structures(UnitTypeId.BARRACKS).furthest_to(self.start_location)
                 pos = target_barracks.position.towards(townhall_2, 5)
                 await self.build(UnitTypeId.BARRACKS, pos)
+
+            # postav FACTORY REACTOR [74] [0:00 ; 5:18]
+            elif self.can_afford(UnitTypeId.FACTORYREACTOR) and not self.structures(UnitTypeId.FACTORYREACTOR) and not self.already_pending(UnitTypeId.FACTORYREACTOR) and self.structures(UnitTypeId.FACTORY):
+                if self.structures(UnitTypeId.FACTORY).ready.exists:
+                    factory = self.structures(UnitTypeId.FACTORY).ready.first
+                    if not factory:
+                        pass
+                    else:
+                        factory.build(UnitTypeId.FACTORYREACTOR)
+
+
 
             # trenuj SCV kdyz nemas co delat
             elif self.can_afford(UnitTypeId.SCV) and total_workers < 32:
@@ -231,6 +248,12 @@ class TerranBot(BotAI):
                                 if not self.already_pending_upgrade(UpgradeId.STIMPACK):
                                     self.do(add_on(AbilityId.BARRACKSTECHLABRESEARCH_STIMPACK))
                                     self.do(add_on(AbilityId.RESEARCH_COMBATSHIELD))
+
+            # vyzkoumej TERRAN INFANTRY WEAPONS 1
+            if self.structures(UnitTypeId.ENGINEERINGBAY).ready.exists:
+                engineering_bay = self.structures(UnitTypeId.ENGINEERINGBAY).ready.first
+                if not self.already_pending_upgrade(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1) and self.can_afford(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1):
+                    self.do(engineering_bay.research(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1))
 
         # pokud nemame townhall a mame na nej penize, tak ho postav
         else:
