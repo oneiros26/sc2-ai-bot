@@ -8,6 +8,7 @@ from sc2.data import Difficulty, Race
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.buff_id import BuffId
 from sc2.ids.upgrade_id import UpgradeId
+import time
 
 class TerranBot(BotAI):
     async def on_step(self, iteration: int):
@@ -146,7 +147,7 @@ class TerranBot(BotAI):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
 
             # vycvic SCV
-            elif self.can_afford(UnitTypeId.SCV) and total_workers < 32:
+            elif self.can_afford(UnitTypeId.SCV) and total_workers < 22 and self.structures(UnitTypeId.SUPPLYDEPOT).amount >= 3:
                 townhall_2.train(UnitTypeId.SCV)
                 townhall.train(UnitTypeId.SCV)
 
@@ -157,7 +158,7 @@ class TerranBot(BotAI):
                     barracks.train(UnitTypeId.MARINE)
 
             # postav BARRACKS TECH LAB [34] [0:00 ; 3:18]
-            elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and total_marines >= 10 and self.structures(UnitTypeId.BARRACKSTECHLAB).amount < 1:
+            elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and total_marines >= 10 and self.structures(UnitTypeId.BARRACKSTECHLAB).amount < 2:
                 if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
                     barracks = self.structures(UnitTypeId.BARRACKS).ready.first
                     if not barracks:
@@ -165,27 +166,29 @@ class TerranBot(BotAI):
                     else:
                         barracks.build(UnitTypeId.BARRACKSTECHLAB)
 
-            #dalsi 2 supply depoty
+            # postav 2 SUPPLY DEPOTY [44] [0:00 ; 3:43]
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 5 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.BARRACKSTECHLAB):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
 
-            #dalsi 2 refinery
+            # postav 2 RAFINERY [63] [0:00 ; 4:32]
             elif self.structures(UnitTypeId.REFINERY).amount < 3 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 5:
                 vespenes = self.vespene_geyser.closer_than(15, townhall_2)
                 await self.build(UnitTypeId.REFINERY, vespenes.random)
 
+            # postav FACTORY [63] [0:00 ; 4:33]
             elif self.can_afford(UnitTypeId.FACTORY) and not self.structures(UnitTypeId.FACTORY) and self.structures(UnitTypeId.REFINERY).amount == 3:
                 await self.build(UnitTypeId.FACTORY, near=townhall_2)
 
+            # postav ENGINEERING BAY [66] [0:00 ; 4:44]
             elif self.can_afford(UnitTypeId.ENGINEERINGBAY) and not self.structures(UnitTypeId.ENGINEERINGBAY) and self.structures(UnitTypeId.FACTORY):
                 await self.build(UnitTypeId.ENGINEERINGBAY, near=townhall_2)
 
+            # postav 2 BARRACKS [70] [0:00 ; 4:57]
             elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 5 and self.structures(UnitTypeId.ENGINEERINGBAY):
                 target_barracks = self.structures(UnitTypeId.BARRACKS).furthest_to(self.start_location)
                 pos = target_barracks.position.towards(townhall_2, 5)
                 await self.build(UnitTypeId.BARRACKS, pos)
 
-            #74 [5:18]
 
 
 
