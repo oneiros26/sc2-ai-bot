@@ -155,11 +155,11 @@ class TerranBot(BotAI):
                 await self.build(UnitTypeId.REFINERY, vespenes.random)
 
             # postav FACTORY [63] [0:00 ; 4:33]
-            elif self.can_afford(UnitTypeId.FACTORY) and not self.structures(UnitTypeId.FACTORY) and self.structures(UnitTypeId.REFINERY).amount == 3:
+            elif self.can_afford(UnitTypeId.FACTORY) and not self.structures(UnitTypeId.FACTORY) and self.structures(UnitTypeId.REFINERY).amount == 3 and not self.already_pending(UnitTypeId.FACTORY):
                 await self.build(UnitTypeId.FACTORY, near=townhall_2)
 
             # postav ENGINEERING BAY [66] [0:00 ; 4:44]
-            elif self.can_afford(UnitTypeId.ENGINEERINGBAY) and not self.structures(UnitTypeId.ENGINEERINGBAY) and self.structures(UnitTypeId.FACTORY):
+            elif self.can_afford(UnitTypeId.ENGINEERINGBAY) and not self.structures(UnitTypeId.ENGINEERINGBAY) and self.structures(UnitTypeId.FACTORY) and not self.already_pending(UnitTypeId.ENGINEERINGBAY):
                 await self.build(UnitTypeId.ENGINEERINGBAY, near=townhall_2)
 
             # postav 2 BARRACKS [70] [0:00 ; 4:57]
@@ -168,6 +168,7 @@ class TerranBot(BotAI):
                 pos = target_barracks.position.towards(townhall_2, 5)
                 await self.build(UnitTypeId.BARRACKS, pos)
 
+            # trenuj SCV kdyz nemas co delat
             elif self.can_afford(UnitTypeId.SCV) and total_workers < 32:
                 if not self.already_pending(UnitTypeId.SCV) and townhall != townhall_2:
                     townhall.train(UnitTypeId.SCV)
@@ -213,7 +214,7 @@ class TerranBot(BotAI):
 
 
 
-            # research stimpack a combat shield          tohle tu nech!!!!!!!!! nesahat
+            # vyzkoumej STIMPACK a COMBAT SHIELD - NESAHAT, FUNGUJE
             if self.structures(UnitTypeId.BARRACKSTECHLAB).amount == 1:
                 for barracks in self.structures(UnitTypeId.BARRACKS).ready:
                     if barracks.has_add_on:
