@@ -145,6 +145,11 @@ class TerranBot(BotAI):
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 3 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.BARRACKSTECHLAB):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
 
+            # vycvic SCV
+            elif self.can_afford(UnitTypeId.SCV) and total_workers < 32:
+                townhall_2.train(UnitTypeId.SCV)
+                townhall.train(UnitTypeId.SCV)
+
             # vycvic 2 MARINES [34]
             elif self.can_afford(UnitTypeId.MARINE) and total_marines < 10 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 3:
                 barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
@@ -152,7 +157,7 @@ class TerranBot(BotAI):
                     barracks.train(UnitTypeId.MARINE)
 
             # postav BARRACKS TECH LAB [34] [0:00 ; 3:18]
-            elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and total_marines >= 10 and self.structures(UnitTypeId.BARRACKSTECHLAB).amount < 2:
+            elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and total_marines >= 10 and self.structures(UnitTypeId.BARRACKSTECHLAB).amount < 1:
                 if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
                     barracks = self.structures(UnitTypeId.BARRACKS).ready.first
                     if not barracks:
@@ -160,12 +165,45 @@ class TerranBot(BotAI):
                     else:
                         barracks.build(UnitTypeId.BARRACKSTECHLAB)
 
-            
+            #dalsi 2 supply depoty
+            elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 5 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.BARRACKSTECHLAB):
+                await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
+
+            #dalsi 2 refinery
+            elif self.structures(UnitTypeId.REFINERY).amount < 3 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 5:
+                vespenes = self.vespene_geyser.closer_than(15, townhall_2)
+                await self.build(UnitTypeId.REFINERY, vespenes.random)
+
+            elif self.can_afford(UnitTypeId.FACTORY) and not self.structures(UnitTypeId.FACTORY) and self.structures(UnitTypeId.REFINERY).amount == 3:
+                await self.build(UnitTypeId.FACTORY, near=townhall_2)
+
+            elif self.can_afford(UnitTypeId.ENGINEERINGBAY) and not self.structures(UnitTypeId.ENGINEERINGBAY) and self.structures(UnitTypeId.FACTORY):
+                await self.build(UnitTypeId.ENGINEERINGBAY, near=townhall_2)
+
+            elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 5 and self.structures(UnitTypeId.ENGINEERINGBAY):
+                target_barracks = self.structures(UnitTypeId.BARRACKS).furthest_to(self.start_location)
+                pos = target_barracks.position.towards(townhall_2, 5)
+                await self.build(UnitTypeId.BARRACKS, pos)
 
 
 
-
-
+            # research stimpack a combat shield (musi to byt odelene tady vpici nech to tady) ----nesahat
+            if self.structures(UnitTypeId.BARRACKSTECHLAB).amount == 1:
+                for barracks in self.structures(UnitTypeId.BARRACKS).ready:
+                    if barracks.has_add_on:
+                        add_on_tag = barracks.add_on_tag
+                        # Search for the add-on in the ready structures
+                        add_on = None
+                        for structure in self.structures.ready:
+                            if structure.tag == add_on_tag:
+                                add_on = structure
+                                break
+                        if add_on:
+                            if add_on.type_id == UnitTypeId.BARRACKSTECHLAB:
+                                # Check if Stimpack research is already pending
+                                if not self.already_pending_upgrade(UpgradeId.STIMPACK):
+                                    self.do(add_on(AbilityId.BARRACKSTECHLABRESEARCH_STIMPACK))
+                                    self.do(add_on(AbilityId.RESEARCH_COMBATSHIELD))
         # pokud nemame townhall a mame na nej penize, tak ho postav
         else:
             if self.can_afford(UnitTypeId.COMMANDCENTER):
