@@ -6,6 +6,8 @@ from sc2 import maps
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.data import Difficulty, Race
 from sc2.ids.ability_id import AbilityId
+from sc2.ids.buff_id import BuffId
+from sc2.ids.upgrade_id import UpgradeId
 
 class TerranBot(BotAI):
     async def on_step(self, iteration: int):
@@ -68,14 +70,17 @@ class TerranBot(BotAI):
 
             # postav BARRACKS REACTOR [19] [1:33 ; 1:26] +7
             elif not self.structures(UnitTypeId.BARRACKSREACTOR) and not self.already_pending(UnitTypeId.BARRACKSREACTOR) and self.can_afford(UnitTypeId.BARRACKSREACTOR) and self.structures(UnitTypeId.BARRACKS):
-                if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
-                    barracks = self.structures(UnitTypeId.BARRACKS).ready.first
-                    if not barracks:
-                        pass
-                    else:
-                        barracks.build(UnitTypeId.BARRACKSREACTOR)
+                try:
+                    if self.structures(UnitTypeId.BARRACKS).ready.first is not None:
+                        barracks = self.structures(UnitTypeId.BARRACKS).ready.first
+                        if not barracks:
+                            pass
+                        else:
+                            barracks.build(UnitTypeId.BARRACKSREACTOR)
+                except:
+                    print("An exception occurred")
 
-            # postav dalsi COMMAND CENTER [19] [1:44 ; 1:38] +6
+                    # postav dalsi COMMAND CENTER [19] [1:44 ; 1:38] +6
             elif self.can_afford(UnitTypeId.COMMANDCENTER) and self.structures(UnitTypeId.BARRACKSREACTOR) and ((self.structures(UnitTypeId.COMMANDCENTER).amount == 1 and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 0) or (self.structures(UnitTypeId.ORBITALCOMMAND).amount == 1 and self.structures(UnitTypeId.COMMANDCENTER).amount == 0)):
                 expansion_location = await self.get_next_expansion()
                 if expansion_location:
@@ -114,7 +119,8 @@ class TerranBot(BotAI):
             # postav 2 BARRACKS [26] [2:23 ; 2:23] +0
             elif self.structures(UnitTypeId.BARRACKS).amount < 3 and not self.already_pending(UnitTypeId.BARRACKS) and self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BUNKER):
                 target_barracks = self.structures(UnitTypeId.BARRACKS).random
-                await self.build(UnitTypeId.BARRACKS, near=target_barracks)
+                pos = target_barracks.position.towards(self.enemy_start_locations[0], 5)
+                await self.build(UnitTypeId.BARRACKS, pos)
 
             # vylepsi second COMMAND CENTER na ORBITAL COMMAND [29] [3:03 ; 2:50] +12
             elif self.can_afford(UnitTypeId.ORBITALCOMMAND) and (self.structures(UnitTypeId.BARRACKS).amount >= 2 or self.structures(UnitTypeId.BARRACKSREACTOR).amount >= 1) and self.structures(UnitTypeId.ORBITALCOMMAND).amount < 2 and not townhall_2.orders:
@@ -154,7 +160,7 @@ class TerranBot(BotAI):
                     else:
                         barracks.build(UnitTypeId.BARRACKSTECHLAB)
 
-            # 
+            
 
 
 
