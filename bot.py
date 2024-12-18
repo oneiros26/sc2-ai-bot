@@ -59,17 +59,14 @@ class TerranBot(BotAI):
 
             # postav BARRACKS REACTOR [19] [1:33 ; 1:26] +7
             elif not self.structures(UnitTypeId.BARRACKSREACTOR) and not self.already_pending(UnitTypeId.BARRACKSREACTOR) and self.can_afford(UnitTypeId.BARRACKSREACTOR) and self.structures(UnitTypeId.BARRACKS):
-                try:
-                    if self.structures(UnitTypeId.BARRACKS).ready.exists:
-                        barracks = self.structures(UnitTypeId.BARRACKS).ready.first
-                        if not barracks:
-                            pass
-                        else:
-                            barracks.build(UnitTypeId.BARRACKSREACTOR)
-                except:
-                    print("An exception occurred")
+                if self.structures(UnitTypeId.BARRACKS).ready.exists:
+                    barracks = self.structures(UnitTypeId.BARRACKS).ready.first
+                    if not barracks:
+                        pass
+                    else:
+                        barracks.build(UnitTypeId.BARRACKSREACTOR)
 
-                    # postav dalsi COMMAND CENTER [19] [1:44 ; 1:38] +6
+            # postav dalsi COMMAND CENTER [19] [1:44 ; 1:38] +6
             elif self.can_afford(UnitTypeId.COMMANDCENTER) and self.structures(UnitTypeId.BARRACKSREACTOR) and ((self.structures(UnitTypeId.COMMANDCENTER).amount == 1 and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 0) or (self.structures(UnitTypeId.ORBITALCOMMAND).amount == 1 and self.structures(UnitTypeId.COMMANDCENTER).amount == 0)):
                 expansion_location = await self.get_next_expansion()
                 if expansion_location:
@@ -160,7 +157,8 @@ class TerranBot(BotAI):
                 await self.build(UnitTypeId.REFINERY, vespenes.random)
 
             # postav FACTORY [63] [0:00 ; 4:33]
-            elif self.can_afford(UnitTypeId.FACTORY) and not self.structures(UnitTypeId.FACTORY) and self.structures(UnitTypeId.REFINERY).amount == 3 and not self.already_pending(UnitTypeId.FACTORY):
+            # nechal jsem postavit 2. On v tutorialu ma jen jednu a zmeni ten addon, to je ale zbytecne komplikovany za me
+            elif self.can_afford(UnitTypeId.FACTORY) and self.structures(UnitTypeId.FACTORY).amount < 2 and self.structures(UnitTypeId.REFINERY).amount == 3 and not self.already_pending(UnitTypeId.FACTORY):
                 pos = townhall_2.position.towards(self.enemy_start_locations[0], 10)
                 await self.build(UnitTypeId.FACTORY, pos)
 
@@ -169,9 +167,10 @@ class TerranBot(BotAI):
                 await self.build(UnitTypeId.ENGINEERINGBAY, near=townhall_2)
 
             # postav 2 BARRACKS [70] [0:00 ; 4:57]
-            elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 5 and self.structures(UnitTypeId.ENGINEERINGBAY):
+            elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 5 and self.structures(UnitTypeId.ENGINEERINGBAY) and not self.already_pending(UnitTypeId.BARRACKS):
+                expansion_location = await self.get_next_expansion()
                 target_barracks = self.structures(UnitTypeId.BARRACKS).furthest_to(self.start_location)
-                pos = target_barracks.position.towards(townhall_2, 5)
+                pos = target_barracks.position.towards(expansion_location, 5)
                 await self.build(UnitTypeId.BARRACKS, pos)
 
             # postav FACTORY REACTOR [74] [0:00 ; 5:18]
@@ -183,7 +182,59 @@ class TerranBot(BotAI):
                     else:
                         factory.build(UnitTypeId.FACTORYREACTOR)
 
+            # postav STAR PORT [74] [0:00 ; 5:20]
+            elif self.can_afford(UnitTypeId.STARPORT) and not self.structures(UnitTypeId.STARPORT) and not self.already_pending(UnitTypeId.STARPORT) and self.structures(UnitTypeId.FACTORYREACTOR) and self.structures(UnitTypeId.FACTORYTECHLAB):
+                await self.build(UnitTypeId.STARPORT, near=townhall)
 
+            # postav REFINERY
+            elif self.structures(UnitTypeId.REFINERY).amount < 4 and self.structures(UnitTypeId.STARPORT):
+                vespenes = self.vespene_geyser.closer_than(15, townhall)
+                await self.build(UnitTypeId.REFINERY, vespenes.random)
+
+            # postav BARRACKS REACTOR
+            elif self.structures(UnitTypeId.BARRACKSREACTOR).amount < 2 and not self.already_pending(UnitTypeId.BARRACKSREACTOR) and self.can_afford(UnitTypeId.BARRACKSREACTOR) and self.structures(UnitTypeId.REFINERY).amount >= 4:
+                if self.structures(UnitTypeId.BARRACKS).ready.exists:
+                    barracks = self.structures(UnitTypeId.BARRACKS).ready.first
+                    if not barracks:
+                        pass
+                    else:
+                        barracks.build(UnitTypeId.BARRACKSREACTOR)
+
+            # postav BARRACKS TECH LAB
+            elif self.structures(UnitTypeId.BARRACKSTECHLAB).amount < 3 and not self.already_pending(UnitTypeId.BARRACKSTECHLAB) and self.can_afford(UnitTypeId.BARRACKSTECHLAB) and self.structures(UnitTypeId.BARRACKSREACTOR).amount >= 2:
+                if self.structures(UnitTypeId.BARRACKS).ready.exists:
+                    barracks = self.structures(UnitTypeId.BARRACKS).ready.first
+                    if not barracks:
+                        pass
+                    else:
+                        barracks.build(UnitTypeId.BARRACKSTECHLAB)
+
+            # vycvic 2 MARINES
+            elif self.can_afford(UnitTypeId.MARINE) and total_marines < 12 and self.structures(UnitTypeId.BARRACKSTECHLAB).amount >= 3:
+                barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
+                for barracks in barracks_ready:
+                    barracks.train(UnitTypeId.MARINE)
+
+            # postav FACTORY TECH LAB [89] [0:00 ; 6:04]
+            elif self.can_afford(UnitTypeId.FACTORYTECHLAB) and not self.structures(UnitTypeId.FACTORYTECHLAB) and not self.already_pending(UnitTypeId.FACTORYTECHLAB) and self.structures(UnitTypeId.FACTORYREACTOR) and self.structures(UnitTypeId.FACTORY).amount >= 2:
+                if self.structures(UnitTypeId.FACTORY).ready.exists:
+                    factory = self.structures(UnitTypeId.FACTORY).ready.first
+                    if not factory:
+                        pass
+                    else:
+                        factory.build(UnitTypeId.FACTORYTECHLAB)
+
+            # vycvic MARAUDER
+
+            # vycvic 4 SIEGE TANKS a 8 MEDIVACS
+
+
+
+
+
+            # trenuj MARINES kdyz nemas co delat
+                elif self.can_afford(UnitTypeId.MARINE) and self.structures(UnitTypeId.FACTORYTECHLAB):
+                    pass # dodelat
 
             # trenuj SCV kdyz nemas co delat
             elif self.can_afford(UnitTypeId.SCV) and total_workers < 32:
