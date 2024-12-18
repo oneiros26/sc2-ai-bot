@@ -28,16 +28,17 @@ class TerranBot(BotAI):
         close_ramp_depot = sorted_depots[0]
         far_ramp_depot = sorted_depots[-1]
 
-        # vzichni nepracujici zpatky do prace
-        await self.distribute_workers()
-
         # pokud mame townhall, prirad ho do var townhall
         if self.townhalls:
             townhall = self.townhalls.closest_to(self.start_location)
             townhall_2 = self.townhalls.furthest_to(self.start_location)
 
+            # vycvic 3 SCV proti worker rush strategii
+            if total_workers < 15:
+                townhall.train(UnitTypeId.SCV)
+
             # postav SUPPLY DEPOT [14] [0:20 ; 0:17] +3
-            if not self.structures(UnitTypeId.SUPPLYDEPOT) and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT):
+            elif not self.structures(UnitTypeId.SUPPLYDEPOT) and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and total_workers >= 15:
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=close_ramp_depot)
 
             # postav BARRACKS [15] [0:44 ; 0:39] +4
@@ -266,44 +267,6 @@ class TerranBot(BotAI):
                 elif not self.already_pending(UnitTypeId.SCV):
                     townhall.train(UnitTypeId.SCV)
 
-
-
-
-
-
-
-
-
-
-            #DEFEND            funguje zatim spatne jen pro zacatek
-            # Check if the enemy is attacking or there are enemy units near
-            if self.enemy_units.exists or self.enemy_structures.exists:
-                # Gather all available Marines
-                marines = self.units(UnitTypeId.MARINE).ready
-                if marines:
-                    # Get the enemy position (you can also use a specific enemy unit, structure, or location)
-                    enemy_position = self.enemy_units.closest_to(
-                        self.start_location).position if self.enemy_units else self.enemy_structures.closest_to(
-                        self.start_location).position
-
-                    # Move the Marines to the enemy location
-                    for marine in marines:
-                        # Move the Marines towards the enemy location
-                        self.do(marine.move(enemy_position))
-
-                    # Optionally, command the Marines to attack the enemy
-                    # If we want them to automatically attack when in range
-                    for marine in marines:
-                        self.do(marine.attack(enemy_position))
-                    print("Marines gathered to defend.")
-
-
-
-
-
-
-
-
             # vyzkoumej STIMPACK a COMBAT SHIELD - NESAHAT, FUNGUJE
             if self.structures(UnitTypeId.BARRACKSTECHLAB).amount == 1:
                 for barracks in self.structures(UnitTypeId.BARRACKS).ready:
@@ -328,13 +291,41 @@ class TerranBot(BotAI):
                 if not self.already_pending_upgrade(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1) and self.can_afford(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1):
                     self.do(engineering_bay.research(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1))
 
+            # DEFEND against worker rush
+            defend_radius = 20
+            nearby_enemy_units = self.enemy_units.closer_than(defend_radius, self.start_location)
+
+            if nearby_enemy_units.exists and total_marines < 2:
+                scvs = self.units(UnitTypeId.SCV)
+                enemy_base = self.enemy_start_locations[0]
+
+                for scv in scvs:
+                    self.do(scv.attack(enemy_base))
+            else:
+                scvs = self.units(UnitTypeId.SCV)
+                for scv in scvs:
+                    self.do(scv.stop())
+                await self.distribute_workers()
+
+
+
         # pokud nemame townhall a mame na nej penize, tak ho postav
         else:
             if self.can_afford(UnitTypeId.COMMANDCENTER):
                 await self.expand_now()
 
+class WorkerRushBot(BotAI):
+    async def on_step(self, iteration: int):
+        if self.townhalls:
+            townhall = self.townhalls.closest_to(self.start_location)
+            workers = self.units(UnitTypeId.SCV)
+            enemy_base = self.enemy_start_locations[0]
+
+            for worker in workers:
+                self.do(worker.attack(enemy_base))
+
 run_game(
-     sc2.maps.get("Equilibrium513AIE"),
-    [Bot(Race.Terran, TerranBot()), Computer(Race.Protoss, Difficulty.VeryEasy)],
+    sc2.maps.get("Equilibrium513AIE"),
+    [Bot(Race.Terran, WorkerRushBot()), Bot(Race.Terran, TerranBot())],
     realtime = False
 )
