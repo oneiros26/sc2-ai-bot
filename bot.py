@@ -19,6 +19,9 @@ class TerranBot(BotAI):
 
         total_workers = self.units(UnitTypeId.SCV).amount + self.already_pending(UnitTypeId.SCV)
         total_marines = self.units(UnitTypeId.MARINE).amount + self.already_pending(UnitTypeId.MARINE)
+        total_marauders = self.units(UnitTypeId.MARAUDER).amount + self.already_pending(UnitTypeId.MARAUDER)
+        total_medivacs = self.units(UnitTypeId.MEDIVAC).amount + self.already_pending(UnitTypeId.MEDIVAC)
+        total_siegetanks = self.units(UnitTypeId.SIEGETANK).amount + self.already_pending(UnitTypeId.SIEGETANK)
         main_ramp = self.main_base_ramp
         corner_depots = list(main_ramp.corner_depots)
         sorted_depots = sorted(corner_depots, key=lambda p: p.x)
@@ -52,7 +55,7 @@ class TerranBot(BotAI):
                 await self.build(UnitTypeId.REFINERY, vespenes.random)
 
             # posli SCV do rafinerie
-            elif self.structures(UnitTypeId.REFINERY).ready and self.structures(UnitTypeId.REFINERY).ready.first.assigned_harvesters < 3:
+            elif self.structures(UnitTypeId.REFINERY).ready and self.structures(UnitTypeId.REFINERY).ready.first.assigned_harvesters < 3 and not self.structures(UnitTypeId.FACTORYTECHLAB):
                 refinery = self.structures(UnitTypeId.REFINERY).ready.first
                 scv_gas = self.units(UnitTypeId.SCV).first
                 scv_gas.gather(refinery)
@@ -151,14 +154,14 @@ class TerranBot(BotAI):
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 5 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.BARRACKSTECHLAB):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
 
-            # postav 2 RAFINERY [63] [0:00 ; 4:32]
-            elif self.structures(UnitTypeId.REFINERY).amount < 3 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 5:
+            # postav RAFINERY [63] [0:00 ; 4:32]
+            elif self.structures(UnitTypeId.REFINERY).amount < 2 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 5 and not self.already_pending(UnitTypeId.REFINERY):
                 vespenes = self.vespene_geyser.closer_than(15, townhall_2)
                 await self.build(UnitTypeId.REFINERY, vespenes.random)
 
             # postav FACTORY [63] [0:00 ; 4:33]
             # nechal jsem postavit 2. On v tutorialu ma jen jednu a zmeni ten addon, to je ale zbytecne komplikovany za me
-            elif self.can_afford(UnitTypeId.FACTORY) and self.structures(UnitTypeId.FACTORY).amount < 2 and self.structures(UnitTypeId.REFINERY).amount == 3 and not self.already_pending(UnitTypeId.FACTORY):
+            elif self.can_afford(UnitTypeId.FACTORY) and self.structures(UnitTypeId.FACTORY).amount < 2 and self.structures(UnitTypeId.REFINERY).amount == 2 and not self.already_pending(UnitTypeId.FACTORY):
                 pos = townhall_2.position.towards(self.enemy_start_locations[0], 10)
                 await self.build(UnitTypeId.FACTORY, pos)
 
@@ -167,10 +170,15 @@ class TerranBot(BotAI):
                 await self.build(UnitTypeId.ENGINEERINGBAY, near=townhall_2)
 
             # postav 2 BARRACKS [70] [0:00 ; 4:57]
-            elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 5 and self.structures(UnitTypeId.ENGINEERINGBAY) and not self.already_pending(UnitTypeId.BARRACKS):
+            elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 4 and self.structures(UnitTypeId.ENGINEERINGBAY) and not self.already_pending(UnitTypeId.BARRACKS):
                 expansion_location = await self.get_next_expansion()
                 target_barracks = self.structures(UnitTypeId.BARRACKS).furthest_to(self.start_location)
-                pos = target_barracks.position.towards(expansion_location, 5)
+                pos = target_barracks.position.towards(expansion_location, 4)
+                await self.build(UnitTypeId.BARRACKS, pos)
+
+            elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 5 and self.structures(UnitTypeId.ENGINEERINGBAY) and not self.already_pending(UnitTypeId.BARRACKS):
+                target_barracks = self.structures(UnitTypeId.BARRACKS).furthest_to(self.start_location)
+                pos = target_barracks.position.towards(close_ramp_depot, 6)
                 await self.build(UnitTypeId.BARRACKS, pos)
 
             # postav FACTORY REACTOR [74] [0:00 ; 5:18]
@@ -186,13 +194,8 @@ class TerranBot(BotAI):
             elif self.can_afford(UnitTypeId.STARPORT) and not self.structures(UnitTypeId.STARPORT) and not self.already_pending(UnitTypeId.STARPORT) and self.structures(UnitTypeId.FACTORYREACTOR) and self.structures(UnitTypeId.FACTORYTECHLAB):
                 await self.build(UnitTypeId.STARPORT, near=townhall)
 
-            # postav REFINERY
-            elif self.structures(UnitTypeId.REFINERY).amount < 4 and self.structures(UnitTypeId.STARPORT):
-                vespenes = self.vespene_geyser.closer_than(15, townhall)
-                await self.build(UnitTypeId.REFINERY, vespenes.random)
-
             # postav BARRACKS REACTOR
-            elif self.structures(UnitTypeId.BARRACKSREACTOR).amount < 2 and not self.already_pending(UnitTypeId.BARRACKSREACTOR) and self.can_afford(UnitTypeId.BARRACKSREACTOR) and self.structures(UnitTypeId.REFINERY).amount >= 4:
+            elif self.structures(UnitTypeId.BARRACKSREACTOR).amount < 2 and not self.already_pending(UnitTypeId.BARRACKSREACTOR) and self.can_afford(UnitTypeId.BARRACKSREACTOR) and self.structures(UnitTypeId.REFINERY).amount >= 2:
                 if self.structures(UnitTypeId.BARRACKS).ready.exists:
                     barracks = self.structures(UnitTypeId.BARRACKS).ready.first
                     if not barracks:
@@ -224,17 +227,36 @@ class TerranBot(BotAI):
                     else:
                         factory.build(UnitTypeId.FACTORYTECHLAB)
 
-            # vycvic MARAUDER
+            # vycvic 5 MARAUDER
+            elif self.can_afford(UnitTypeId.MARAUDER) and self.structures(UnitTypeId.FACTORYTECHLAB) and self.already_pending(UnitTypeId.MARAUDER) <= 2 and total_marauders < 5:
+                barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
+                for barracks in barracks_ready:
+                    barracks.train(UnitTypeId.MARAUDER)
 
             # vycvic 4 SIEGE TANKS a 8 MEDIVACS
+            elif self.can_afford(UnitTypeId.SIEGETANK) and self.structures(UnitTypeId.FACTORYTECHLAB) and not self.already_pending(UnitTypeId.SIEGETANK) and total_siegetanks < 4:
+                factory_ready = self.structures(UnitTypeId.FACTORY).ready
+                for factory in factory_ready:
+                    factory.train(UnitTypeId.SIEGETANK)
 
+            # vycvic 8 MEDAVACS
+            elif self.can_afford(UnitTypeId.MEDIVAC) and self.structures(UnitTypeId.FACTORYTECHLAB) and not self.already_pending(UnitTypeId.MEDIVAC) and total_medivacs < 8:
+                starport_ready = self.structures(UnitTypeId.STARPORT).ready
+                for starport in starport_ready:
+                    starport.train(UnitTypeId.MEDIVAC)
 
+            # stav SUPPLY DEPOTS kdyz nemas co delat
+            elif self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.FACTORYTECHLAB) and self.structures(UnitTypeId.SUPPLYDEPOT).amount < 12:
+                await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall)
 
-
+            elif self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.FACTORYTECHLAB) and self.structures(UnitTypeId.SUPPLYDEPOT).amount < 20:
+                await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
 
             # trenuj MARINES kdyz nemas co delat
-                elif self.can_afford(UnitTypeId.MARINE) and self.structures(UnitTypeId.FACTORYTECHLAB):
-                    pass # dodelat
+            elif self.can_afford(UnitTypeId.MARINE) and self.structures(UnitTypeId.FACTORYTECHLAB) and self.already_pending(UnitTypeId.MARINE) <= 2:
+                barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
+                for barracks in barracks_ready:
+                    barracks.train(UnitTypeId.MARINE)
 
             # trenuj SCV kdyz nemas co delat
             elif self.can_afford(UnitTypeId.SCV) and total_workers < 32:
