@@ -11,6 +11,9 @@ from sc2.ids.upgrade_id import UpgradeId
 import time
 
 class TerranBot(BotAI):
+    def __init__(self):
+        self.scvs_finished_attack = False
+        self.first_marine_attack = False
     async def on_step(self, iteration: int):
         # kolik iteraci probehlo
         print(f"Worker amount: {self.workers.amount}\n"
@@ -118,7 +121,7 @@ class TerranBot(BotAI):
                 townhall_2.build(UnitTypeId.ORBITALCOMMAND)
 
             # vycvic 4 MARINES [30]
-            elif self.can_afford(UnitTypeId.MARINE) and total_marines < 8 and townhall_2.orders and townhall != townhall_2:
+            elif self.can_afford(UnitTypeId.MARINE) and total_marines < 10 and townhall_2.orders and townhall != townhall_2:
                 barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
                 for barracks in barracks_ready:
                     barracks.train(UnitTypeId.MARINE)
@@ -137,7 +140,7 @@ class TerranBot(BotAI):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
 
             # vycvic 2 MARINES [34]
-            elif self.can_afford(UnitTypeId.MARINE) and total_marines < 10 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 3:
+            elif self.can_afford(UnitTypeId.MARINE) and total_marines < 18 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 3:
                 barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
                 for barracks in barracks_ready:
                     barracks.train(UnitTypeId.MARINE)
@@ -169,6 +172,25 @@ class TerranBot(BotAI):
             # postav ENGINEERING BAY [66] [0:00 ; 4:44]
             elif self.can_afford(UnitTypeId.ENGINEERINGBAY) and not self.structures(UnitTypeId.ENGINEERINGBAY) and self.structures(UnitTypeId.FACTORY) and not self.already_pending(UnitTypeId.ENGINEERINGBAY):
                 await self.build(UnitTypeId.ENGINEERINGBAY, near=townhall_2)
+
+            # prvni attack na pridani stresu
+            ready_marines = self.units(UnitTypeId.MARINE).ready
+            marines_to_attack = 10
+
+            if ready_marines.amount >= marines_to_attack and self.first_marine_attack == False:
+                # only 10 marines will attack
+                attacking_marines = ready_marines[:marines_to_attack]
+
+                if self.enemy_structures.exists:
+                    target = self.enemy_structures.closest_to(self.start_location).position
+                else:
+                    target = self.enemy_start_locations[0]
+
+                for marine in attacking_marines:
+                    marine.attack(target)
+
+                self.first_marine_attack = True
+
 
             # postav 2 BARRACKS [70] [0:00 ; 4:57]
             elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 4 and self.structures(UnitTypeId.ENGINEERINGBAY) and not self.already_pending(UnitTypeId.BARRACKS):
@@ -214,7 +236,7 @@ class TerranBot(BotAI):
                         barracks.build(UnitTypeId.BARRACKSTECHLAB)
 
             # vycvic 2 MARINES
-            elif self.can_afford(UnitTypeId.MARINE) and total_marines < 12 and self.structures(UnitTypeId.BARRACKSTECHLAB).amount >= 3:
+            elif self.can_afford(UnitTypeId.MARINE) and total_marines < 22 and self.structures(UnitTypeId.BARRACKSTECHLAB).amount >= 3:
                 barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
                 for barracks in barracks_ready:
                     barracks.train(UnitTypeId.MARINE)
@@ -240,24 +262,31 @@ class TerranBot(BotAI):
                 for factory in factory_ready:
                     factory.train(UnitTypeId.SIEGETANK)
 
-            # vycvic 8 MEDAVACS
-            elif self.can_afford(UnitTypeId.MEDIVAC) and self.structures(UnitTypeId.FACTORYTECHLAB) and not self.already_pending(UnitTypeId.MEDIVAC) and total_medivacs < 8:
+            # vycvic 6 MEDAVACS
+            elif self.can_afford(UnitTypeId.MEDIVAC) and self.structures(UnitTypeId.FACTORYTECHLAB) and not self.already_pending(UnitTypeId.MEDIVAC) and total_medivacs < 6:
                 starport_ready = self.structures(UnitTypeId.STARPORT).ready
                 for starport in starport_ready:
                     starport.train(UnitTypeId.MEDIVAC)
 
-            # stav SUPPLY DEPOTS kdyz nemas co delat
-            elif self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.FACTORYTECHLAB) and self.structures(UnitTypeId.SUPPLYDEPOT).amount < 12:
-                await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall)
+            # TIME TO WIN
+            elif self.units(UnitTypeId.SIEGETANK).amount >= 3 and self.units(UnitTypeId.MEDIVAC).amount >= 4 and self.units(UnitTypeId.MARAUDER).amount >= 3:
+                if self.enemy_structures.exists:
+                    target = self.enemy_structures.closest_to(self.start_location).position
+                else:
+                    target = self.enemy_start_locations[0]
 
-            elif self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.FACTORYTECHLAB) and self.structures(UnitTypeId.SUPPLYDEPOT).amount < 20:
-                await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
+                for unit in self.units:
+                    unit.attack(target)
 
-            # trenuj MARINES kdyz nemas co delat
-            elif self.can_afford(UnitTypeId.MARINE) and self.structures(UnitTypeId.FACTORYTECHLAB) and self.already_pending(UnitTypeId.MARINE) <= 2:
-                barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
-                for barracks in barracks_ready:
-                    barracks.train(UnitTypeId.MARINE)
+                for marine in self.units(UnitTypeId.MARINE).ready:
+                    if not marine.has_buff(BuffId.STIMPACK) and AbilityId.EFFECT_STIM not in marine.orders:
+                        if marine.is_attacking or marine.is_moving or marine.weapon_cooldown > 0:
+                            marine(AbilityId.EFFECT_STIM)
+
+                scvs = self.units(UnitTypeId.SCV)
+                for scv in scvs:
+                    self.do(scv.stop())
+                await self.distribute_workers()
 
             # trenuj SCV kdyz nemas co delat
             elif self.can_afford(UnitTypeId.SCV) and total_workers < 32:
@@ -266,6 +295,17 @@ class TerranBot(BotAI):
                     townhall_2.train(UnitTypeId.SCV)
                 elif not self.already_pending(UnitTypeId.SCV):
                     townhall.train(UnitTypeId.SCV)
+
+            # stav SUPPLY DEPOTS kdyz nemas co delat
+            elif self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.FACTORYTECHLAB) and self.structures(UnitTypeId.SUPPLYDEPOT).amount < 12:
+                await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall)
+                await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
+
+            # trenuj MARINES kdyz nemas co delat
+            elif self.can_afford(UnitTypeId.MARINE) and self.structures(UnitTypeId.FACTORYTECHLAB) and self.already_pending(UnitTypeId.MARINE) <= 2 and self.units(UnitTypeId.SIEGETANK).amount >= 3 and self.units(UnitTypeId.MEDIVAC).amount >= 4 and self.units(UnitTypeId.MARAUDER).amount >= 3:
+                barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
+                for barracks in barracks_ready:
+                    barracks.train(UnitTypeId.MARINE)
 
             # vyzkoumej STIMPACK a COMBAT SHIELD - NESAHAT, FUNGUJE
             if self.structures(UnitTypeId.BARRACKSTECHLAB).amount == 1:
@@ -291,23 +331,40 @@ class TerranBot(BotAI):
                 if not self.already_pending_upgrade(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1) and self.can_afford(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1):
                     self.do(engineering_bay.research(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1))
 
-            # DEFEND against worker rush
+            # DEFEND
             defend_radius = 20
             nearby_enemy_units = self.enemy_units.closer_than(defend_radius, self.start_location)
 
             if nearby_enemy_units.exists and total_marines < 2:
+                self.scvs_finished_attack = True
                 scvs = self.units(UnitTypeId.SCV)
                 enemy_base = self.enemy_start_locations[0]
 
                 for scv in scvs:
                     self.do(scv.attack(enemy_base))
-            else:
+            elif self.scvs_finished_attack == True:
                 scvs = self.units(UnitTypeId.SCV)
                 for scv in scvs:
                     self.do(scv.stop())
                 await self.distribute_workers()
+                self.scvs_finished_attack = False
+            else:
+                await self.distribute_workers()
+
+            if nearby_enemy_units.exists and total_marines >= 2:
+                pass
 
 
+            # davej stimpack kdyz muzes
+            for marine in self.units(UnitTypeId.MARINE).ready:
+                if not marine.has_buff(BuffId.STIMPACK) and AbilityId.EFFECT_STIM not in marine.orders:
+                    if marine.is_attacking or marine.is_moving or marine.weapon_cooldown > 0:
+                        marine(AbilityId.EFFECT_STIM)
+
+            from sc2.bot_ai import BotAI  # Import the base BotAI class
+            from sc2.unit import Unit
+            from sc2.units import Units
+            from sc2.ids.unit_typeid import UnitTypeId
 
         # pokud nemame townhall a mame na nej penize, tak ho postav
         else:
@@ -318,7 +375,7 @@ class WorkerRushBot(BotAI):
     async def on_step(self, iteration: int):
         if self.townhalls:
             townhall = self.townhalls.closest_to(self.start_location)
-            workers = self.units(UnitTypeId.SCV)
+            workers = self.units(UnitTypeId.PROBE)
             enemy_base = self.enemy_start_locations[0]
 
             for worker in workers:
@@ -326,6 +383,6 @@ class WorkerRushBot(BotAI):
 
 run_game(
     sc2.maps.get("Equilibrium513AIE"),
-    [Bot(Race.Terran, WorkerRushBot()), Bot(Race.Terran, TerranBot())],
+    [Bot(Race.Terran, TerranBot()), Computer(Race.Protoss, Difficulty.Hard)],
     realtime = False
 )
