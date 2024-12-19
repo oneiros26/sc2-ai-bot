@@ -14,6 +14,7 @@ class TerranBot(BotAI):
     def __init__(self):
         self.scvs_finished_attack = False
         self.first_marine_attack = False
+        self.siege_def = False
     async def on_step(self, iteration: int):
         # kolik iteraci probehlo
         print(f"Worker amount: {self.workers.amount}\n"
@@ -145,6 +146,11 @@ class TerranBot(BotAI):
                 for factory in factory_ready:
                     factory.train(UnitTypeId.SIEGETANK)
 
+            elif self.units(UnitTypeId.SIEGETANK).amount == 2 and self.siege_def == False:
+                for siege in self.units(UnitTypeId.SIEGETANK):
+                    self.do(siege(AbilityId.SIEGEMODE_SIEGEMODE))
+                self.siege_def = True
+
             # postav BARRACKS TECH LAB [33] [0:00 ; 3:10]
             elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and self.structures(UnitTypeId.FACTORYTECHLAB) and not self.structures(UnitTypeId.BARRACKSTECHLAB):
                 if self.structures(UnitTypeId.BARRACKS).ready.exists:
@@ -175,10 +181,11 @@ class TerranBot(BotAI):
 
             # postav 2 SUPPLY DEPOTY [44] [0:00 ; 3:43]
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 5 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.BARRACKSTECHLAB):
-                await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
+                front_of_base = townhall_2.position.towards(self.game_info.map_center, distance=15)
+                await self.build(UnitTypeId.SUPPLYDEPOT, near=front_of_base)
 
-            # postav RAFINERY [63] [0:00 ; 4:32]
-            elif self.structures(UnitTypeId.REFINERY).amount < 2 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 5 and not self.already_pending(UnitTypeId.REFINERY):
+            # postav 2 RAFINERY [63] [0:00 ; 4:32]
+            elif self.structures(UnitTypeId.REFINERY).amount < 3 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 5 and not self.already_pending(UnitTypeId.REFINERY):
                 vespenes = self.vespene_geyser.closer_than(15, townhall_2)
                 await self.build(UnitTypeId.REFINERY, vespenes.random)
 
@@ -245,16 +252,13 @@ class TerranBot(BotAI):
                     starport.train(UnitTypeId.MEDIVAC)
 
             # TIME TO WIN
-            elif self.units(UnitTypeId.SIEGETANK).amount >= 3 and self.units(UnitTypeId.MEDIVAC).amount >= 4 and self.units(UnitTypeId.MARAUDER).amount >= 3:
-                if self.enemy_structures.exists:
-                    target = self.enemy_structures.closest_to(self.start_location).position
-                else:
-                    target = self.enemy_start_locations[0]
-
+            elif self.units(UnitTypeId.SIEGETANK).amount >= 4 and self.units(UnitTypeId.MEDIVAC).amount >= 4 and self.units(UnitTypeId.MARAUDER).amount >= 4:
+                target = self.enemy_start_locations[0]
                 marines = self.units(UnitTypeId.MARINE)
                 siege_t = self.units(UnitTypeId.SIEGETANK)
                 marauders = self.units(UnitTypeId.MARAUDER)
                 medivacs = self.units(UnitTypeId.MEDIVAC)
+
                 for marine in marines:
                     self.do(marine.attack(target))
                 for siege in siege_t:
@@ -283,7 +287,7 @@ class TerranBot(BotAI):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
 
             # trenuj MARINES kdyz nemas co delat
-            elif self.can_afford(UnitTypeId.MARINE) and self.structures(UnitTypeId.FACTORYTECHLAB) and self.already_pending(UnitTypeId.MARINE) <= 2 and self.units(UnitTypeId.SIEGETANK).amount >= 3 and self.units(UnitTypeId.MEDIVAC).amount >= 4 and self.units(UnitTypeId.MARAUDER).amount >= 3:
+            elif self.can_afford(UnitTypeId.MARINE) and self.already_pending(UnitTypeId.MARINE) <= 2 and self.units(UnitTypeId.SIEGETANK).amount >= 2:
                 barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
                 for barracks in barracks_ready:
                     barracks.train(UnitTypeId.MARINE)
@@ -365,16 +369,16 @@ class TerranBot(BotAI):
                     self.do(medivac.move(front_of_base))
 
                 for marine in marines:
-                    if marine.distance_to(front_of_base) < 2:
+                    if marine.distance_to(front_of_base) < 1:
                         self.do(marine.hold_position())
                 for siege in siege_t:
                     if siege.distance_to(front_of_base) < 1:
                         self.do(siege.hold_position())
                 for marauder in marauders:
-                    if marauder.distance_to(front_of_base) < 2:
+                    if marauder.distance_to(front_of_base) < 1:
                         self.do(marauder.hold_position())
                 for medivac in medivacs:
-                    if medivac.distance_to(front_of_base) < 3:
+                    if medivac.distance_to(front_of_base) < 1:
                         self.do(medivac.hold_position())
 
             # davej stimpack kdyz muzes
