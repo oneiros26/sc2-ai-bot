@@ -3,11 +3,11 @@ from sc2.bot_ai import BotAI
 from sc2.main import run_game
 from sc2.player import Bot, Computer
 from sc2 import maps
-from sc2.ids.unit_typeid import UnitTypeId
 from sc2.data import Difficulty, Race
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.buff_id import BuffId
 from sc2.ids.upgrade_id import UpgradeId
+from sc2.ids.unit_typeid import UnitTypeId
 import time
 
 class TerranBot(BotAI):
@@ -140,7 +140,7 @@ class TerranBot(BotAI):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
 
             # vycvic 2 MARINES [34]
-            elif self.can_afford(UnitTypeId.MARINE) and total_marines < 18 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 3:
+            elif self.can_afford(UnitTypeId.MARINE) and total_marines < 15 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 3:
                 barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
                 for barracks in barracks_ready:
                     barracks.train(UnitTypeId.MARINE)
@@ -172,25 +172,6 @@ class TerranBot(BotAI):
             # postav ENGINEERING BAY [66] [0:00 ; 4:44]
             elif self.can_afford(UnitTypeId.ENGINEERINGBAY) and not self.structures(UnitTypeId.ENGINEERINGBAY) and self.structures(UnitTypeId.FACTORY) and not self.already_pending(UnitTypeId.ENGINEERINGBAY):
                 await self.build(UnitTypeId.ENGINEERINGBAY, near=townhall_2)
-
-            # prvni attack na pridani stresu
-            ready_marines = self.units(UnitTypeId.MARINE).ready
-            marines_to_attack = 10
-
-            if ready_marines.amount >= marines_to_attack and self.first_marine_attack == False:
-                # only 10 marines will attack
-                attacking_marines = ready_marines[:marines_to_attack]
-
-                if self.enemy_structures.exists:
-                    target = self.enemy_structures.closest_to(self.start_location).position
-                else:
-                    target = self.enemy_start_locations[0]
-
-                for marine in attacking_marines:
-                    marine.attack(target)
-
-                self.first_marine_attack = True
-
 
             # postav 2 BARRACKS [70] [0:00 ; 4:57]
             elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 4 and self.structures(UnitTypeId.ENGINEERINGBAY) and not self.already_pending(UnitTypeId.BARRACKS):
@@ -332,13 +313,13 @@ class TerranBot(BotAI):
                     self.do(engineering_bay.research(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1))
 
             # DEFEND
-            defend_radius = 20
+            defend_radius = 40
             nearby_enemy_units = self.enemy_units.closer_than(defend_radius, self.start_location)
+            enemy_base = self.enemy_start_locations[0]
 
             if nearby_enemy_units.exists and total_marines < 2:
                 self.scvs_finished_attack = True
                 scvs = self.units(UnitTypeId.SCV)
-                enemy_base = self.enemy_start_locations[0]
 
                 for scv in scvs:
                     self.do(scv.attack(enemy_base))
@@ -352,7 +333,30 @@ class TerranBot(BotAI):
                 await self.distribute_workers()
 
             if nearby_enemy_units.exists and total_marines >= 2:
-                pass
+                marines = self.units(UnitTypeId.MARINE)
+                siege_t = self.units(UnitTypeId.SIEGETANK)
+                marauders = self.units(UnitTypeId.MARAUDER)
+                for marine in marines:
+                    self.do(marine.attack(enemy_base))
+                for siege in siege_t:
+                    self.do(siege.attack(enemy_base))
+                for marauder in marauders:
+                    self.do(marauder.attack(enemy_base))
+
+            else:
+                marines = self.units(UnitTypeId.MARINE)
+                siege_t = self.units(UnitTypeId.SIEGETANK)
+                marauders = self.units(UnitTypeId.MARAUDER)
+                for marine in marines:
+                    self.do(marine.stop())
+                for siege in siege_t:
+                    self.do(siege.stop())
+                for marauder in marauders:
+                    self.do(marauder.stop())
+
+
+
+
 
 
             # davej stimpack kdyz muzes
@@ -360,11 +364,6 @@ class TerranBot(BotAI):
                 if not marine.has_buff(BuffId.STIMPACK) and AbilityId.EFFECT_STIM not in marine.orders:
                     if marine.is_attacking or marine.is_moving or marine.weapon_cooldown > 0:
                         marine(AbilityId.EFFECT_STIM)
-
-            from sc2.bot_ai import BotAI  # Import the base BotAI class
-            from sc2.unit import Unit
-            from sc2.units import Units
-            from sc2.ids.unit_typeid import UnitTypeId
 
         # pokud nemame townhall a mame na nej penize, tak ho postav
         else:
