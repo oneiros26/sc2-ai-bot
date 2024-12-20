@@ -14,12 +14,7 @@ class TerranBot(BotAI):
     def __init__(self):
         self.scvs_finished_attack = False
         self.first_marine_attack = False
-        self.siege_def = False
     async def on_step(self, iteration: int):
-        # kolik iteraci probehlo
-        print(f"Worker amount: {self.workers.amount}\n"
-              f"Supply Used: {self.supply_used}\n"
-              f"Current minerals: {self.minerals}")
 
         total_workers = self.units(UnitTypeId.SCV).amount + self.already_pending(UnitTypeId.SCV)
         total_marines = self.units(UnitTypeId.MARINE).amount + self.already_pending(UnitTypeId.MARINE)
@@ -97,7 +92,7 @@ class TerranBot(BotAI):
 
             # postav BUNKER [23] [2:18 ; 2:15] +3
             elif not self.structures(UnitTypeId.BUNKER) and self.already_pending(UnitTypeId.BUNKER) == 0 and self.can_afford(UnitTypeId.BUNKER) and total_marines >= 2:
-                pos = townhall_2.position.towards(self.enemy_start_locations[0], 4)
+                pos = townhall_2.position.towards(self.game_info.map_center, 12)
                 await self.build(UnitTypeId.BUNKER, pos)
 
             # vycvic 4 MARINES [23]
@@ -129,7 +124,7 @@ class TerranBot(BotAI):
 
             # postav FACTORY [63] [0:00 ; 4:33]
             elif self.can_afford(UnitTypeId.FACTORY) and not self.structures(UnitTypeId.FACTORY) and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 2 and not self.already_pending(UnitTypeId.FACTORY):
-                pos = townhall_2.position.towards(self.enemy_start_locations[0], 10)
+                pos = townhall_2.position.towards(self.enemy_start_locations[0], 6)
                 await self.build(UnitTypeId.FACTORY, pos)
 
             # postav FACTORY TECH LAB [89] [0:00 ; 6:04]
@@ -141,12 +136,14 @@ class TerranBot(BotAI):
                     else:
                         factory.build(UnitTypeId.FACTORYTECHLAB)
 
+            # vycvic 2 SIEGE TANK
             elif self.can_afford(UnitTypeId.SIEGETANK) and self.structures(UnitTypeId.FACTORYTECHLAB) and not self.already_pending(UnitTypeId.SIEGETANK) and total_siegetanks < 2:
                 factory_ready = self.structures(UnitTypeId.FACTORY).ready
                 for factory in factory_ready:
                     factory.train(UnitTypeId.SIEGETANK)
 
-            elif self.units(UnitTypeId.SIEGETANK).amount == 2 and self.siege_def == False:
+            # udelej 1 nebo 2 SIEGE TANK do defense modu
+            elif self.units(UnitTypeId.SIEGETANK).amount <= 2:
                 for siege in self.units(UnitTypeId.SIEGETANK):
                     self.do(siege(AbilityId.SIEGEMODE_SIEGEMODE))
                 self.siege_def = True
@@ -261,12 +258,26 @@ class TerranBot(BotAI):
 
                 for marine in marines:
                     self.do(marine.attack(target))
+                    # aktivuj STIMPACK na MARINE
+                    if not marine.has_buff(BuffId.STIMPACK) and AbilityId.EFFECT_STIM not in marine.orders:
+                        marine(AbilityId.EFFECT_STIM)
                 for siege in siege_t:
                     self.do(siege.attack(target))
                 for marauder in marauders:
                     self.do(marauder.attack(target))
                 for medivac in medivacs:
-                    self.do(medivac.move(target))
+                    damaged_units = self.units.filter(lambda unit: unit.health < unit.health_max)
+
+                    if damaged_units.exists:
+                        target = min(damaged_units, key=lambda unit: unit.health)
+                        self.do(medivac(AbilityId.MEDIVACHEAL_HEAL, target))
+                    else:
+                        soldiers = self.units.filter(lambda unit: unit.type_id in {UnitTypeId.MARINE, UnitTypeId.MARAUDER, UnitTypeId.SIEGETANK})
+                        if soldiers.exists:
+                            target = random.choice(soldiers)
+                            self.do(medivac.smart(target))
+                        else:
+                            self.do(medivac.smart(self.start_location))
 
                 scvs = self.units(UnitTypeId.SCV)
                 for scv in scvs:
@@ -293,11 +304,10 @@ class TerranBot(BotAI):
                     barracks.train(UnitTypeId.MARINE)
 
             # vyzkoumej STIMPACK a COMBAT SHIELD - NESAHAT, FUNGUJE
-            if self.structures(UnitTypeId.BARRACKSTECHLAB).amount == 1:
+            if self.structures(UnitTypeId.BARRACKSTECHLAB).ready.exists:
                 for barracks in self.structures(UnitTypeId.BARRACKS).ready:
                     if barracks.has_add_on:
                         add_on_tag = barracks.add_on_tag
-                        # Search for the add-on in the ready structures
                         add_on = None
                         for structure in self.structures.ready:
                             if structure.tag == add_on_tag:
@@ -305,7 +315,6 @@ class TerranBot(BotAI):
                                 break
                         if add_on:
                             if add_on.type_id == UnitTypeId.BARRACKSTECHLAB:
-                                # Check if Stimpack research is already pending
                                 if not self.already_pending_upgrade(UpgradeId.STIMPACK):
                                     self.do(add_on(AbilityId.BARRACKSTECHLABRESEARCH_STIMPACK))
                                     self.do(add_on(AbilityId.RESEARCH_COMBATSHIELD))
@@ -346,12 +355,26 @@ class TerranBot(BotAI):
                 medivacs = self.units(UnitTypeId.MEDIVAC)
                 for marine in marines:
                     self.do(marine.attack(enemy_base))
+                    # aktivuj STIMPACK na MARINE
+                    if not marine.has_buff(BuffId.STIMPACK) and AbilityId.EFFECT_STIM not in marine.orders:
+                        marine(AbilityId.EFFECT_STIM)
                 for siege in siege_t:
                     self.do(siege.attack(enemy_base))
                 for marauder in marauders:
                     self.do(marauder.attack(enemy_base))
                 for medivac in medivacs:
-                    self.do(medivac.move(nearby_enemy_units))
+                    damaged_units = self.units.filter(lambda unit: unit.health < unit.health_max)
+                    if damaged_units.exists:
+                        target = min(damaged_units, key=lambda unit: unit.health)
+                        self.do(medivac(AbilityId.MEDIVACHEAL_HEAL, target))
+                    else:
+                        soldiers = self.units.filter(
+                            lambda unit: unit.type_id in {UnitTypeId.MARINE, UnitTypeId.MARAUDER, UnitTypeId.SIEGETANK})
+                        if soldiers.exists:
+                            target = random.choice(soldiers)
+                            self.do(medivac.smart(target))
+                        else:
+                            self.do(medivac.smart(self.start_location))
 
             else:
                 marines = self.units(UnitTypeId.MARINE)
@@ -366,7 +389,7 @@ class TerranBot(BotAI):
                 for marauder in marauders:
                     self.do(marauder.move(front_of_base))
                 for medivac in medivacs:
-                    self.do(medivac.move(front_of_base))
+                    self.do(medivac.smart(front_of_base))
 
                 for marine in marines:
                     if marine.distance_to(front_of_base) < 1:
@@ -380,12 +403,6 @@ class TerranBot(BotAI):
                 for medivac in medivacs:
                     if medivac.distance_to(front_of_base) < 1:
                         self.do(medivac.hold_position())
-
-            # davej stimpack kdyz muzes
-            for marine in self.units(UnitTypeId.MARINE).ready:
-                if not marine.has_buff(BuffId.STIMPACK) and AbilityId.EFFECT_STIM not in marine.orders:
-                    if marine.is_attacking or marine.is_moving or marine.weapon_cooldown > 0:
-                        marine(AbilityId.EFFECT_STIM)
 
         # pokud nemame townhall a mame na nej penize, tak ho postav
         else:
@@ -401,6 +418,94 @@ class WorkerRushBot(BotAI):
 
             for worker in workers:
                 self.do(worker.attack(enemy_base))
+
+class AFKBot(BotAI):
+    async def on_step(self, iteration: int):
+        if self.townhalls:
+            await self.distribute_workers()
+
+class BoostedBot(BotAI):
+    async def on_step(self, iteration: int):
+        await self.distribute_workers()
+
+        if self.townhalls:
+            townhall = self.townhalls.closest_to(self.start_location)
+
+            # postav SUPPLY DEPOT
+            if not self.structures(UnitTypeId.SUPPLYDEPOT) and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT):
+                await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall)
+
+            # postav BARRACKS
+            elif not self.structures(UnitTypeId.BARRACKS) and self.already_pending(UnitTypeId.BARRACKS) == 0 and self.can_afford(UnitTypeId.BARRACKS):
+                pos = townhall.position.towards(self.enemy_start_locations[0], 7)
+                await self.build(UnitTypeId.BARRACKS, pos)
+
+            # postav REFINERY
+            elif not self.structures(UnitTypeId.REFINERY) and not self.already_pending(UnitTypeId.REFINERY) and self.can_afford(UnitTypeId.REFINERY):
+                vespenes = self.vespene_geyser.closer_than(15, townhall)
+                await self.build(UnitTypeId.REFINERY, vespenes.random)
+
+            # posli SCV do rafinerie
+            elif self.structures(UnitTypeId.REFINERY).ready and self.structures(UnitTypeId.REFINERY).ready.first.assigned_harvesters < 3 and not self.structures(UnitTypeId.FACTORYTECHLAB):
+                refinery = self.structures(UnitTypeId.REFINERY).ready.first
+                scv_gas = self.units(UnitTypeId.SCV).first
+                scv_gas.gather(refinery)
+
+            # vycvic MARINE
+            elif self.units(UnitTypeId.MARINE).amount < 1:
+                barracks_ready = self.structures(UnitTypeId.BARRACKS).ready
+                for barracks in barracks_ready:
+                    barracks.train(UnitTypeId.MARINE)
+
+            # postav BARRACKS TECH LAB
+            elif self.can_afford(UnitTypeId.BARRACKSTECHLAB) and self.structures(UnitTypeId.BARRACKS) and not self.structures(UnitTypeId.BARRACKSTECHLAB):
+                if self.structures(UnitTypeId.BARRACKS).ready.exists:
+                    barracks = self.structures(UnitTypeId.BARRACKS).ready.first
+                    if not barracks:
+                        pass
+                    else:
+                        barracks.build(UnitTypeId.BARRACKSTECHLAB)
+
+            # postav ENGINEERING BAY
+            elif self.can_afford(UnitTypeId.ENGINEERINGBAY) and not self.structures(UnitTypeId.ENGINEERINGBAY) and not self.already_pending(UnitTypeId.ENGINEERINGBAY):
+                await self.build(UnitTypeId.ENGINEERINGBAY, near=townhall)
+
+            # vyzkoumej STIMPACK a COMBAT SHIELD - NESAHAT, FUNGUJE
+            if self.structures(UnitTypeId.BARRACKSTECHLAB).ready.exists:
+                for barracks in self.structures(UnitTypeId.BARRACKS).ready:
+                    if barracks.has_add_on:
+                        add_on_tag = barracks.add_on_tag
+                        # Search for the add-on in the ready structures+
+                        add_on = None
+                        for structure in self.structures.ready:
+                            if structure.tag == add_on_tag:
+                                add_on = structure
+                                break
+                        if add_on:
+                            if add_on.type_id == UnitTypeId.BARRACKSTECHLAB:
+                                # Check if Stimpack research is already pending
+                                if not self.already_pending_upgrade(UpgradeId.STIMPACK):
+                                    self.do(add_on(AbilityId.BARRACKSTECHLABRESEARCH_STIMPACK))
+                                    self.do(add_on(AbilityId.RESEARCH_COMBATSHIELD))
+
+            # vyzkoumej TERRAN INFANTRY WEAPONS 1
+            if self.structures(UnitTypeId.ENGINEERINGBAY).ready.exists:
+                engineering_bay = self.structures(UnitTypeId.ENGINEERINGBAY).ready.first
+                if not self.already_pending_upgrade(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1) and self.can_afford(
+                        UpgradeId.TERRANINFANTRYWEAPONSLEVEL1):
+                    self.do(engineering_bay.research(UpgradeId.TERRANINFANTRYWEAPONSLEVEL1))
+
+            # davej efekt na marine
+            for marine in self.units(UnitTypeId.MARINE).ready:
+                if not marine.has_buff(BuffId.STIMPACK) and AbilityId.EFFECT_STIM not in marine.orders:
+                    marine(AbilityId.EFFECT_STIM)
+
+            for marine in self.units(UnitTypeId.MARINE).ready:
+                if BuffId.STIMPACK in marine.buffs:
+                    print(f"Marine {marine.tag} has Stimpack activated!")
+                else:
+                    print(f"Marine {marine.tag} does not have Stimpack activated.")
+
 
 run_game(
     sc2.maps.get("Equilibrium513AIE"),
