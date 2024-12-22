@@ -9,12 +9,17 @@ from sc2.ids.buff_id import BuffId
 from sc2.ids.upgrade_id import UpgradeId
 from sc2.ids.unit_typeid import UnitTypeId
 import time
+import math
 
 class TerranBot(BotAI):
     def __init__(self):
         self.scvs_finished_attack = False
         self.first_marine_attack = False
     async def on_step(self, iteration: int):
+
+        if iteration % 5 == 0:
+            rounded_time = math.floor(self.time)
+            print(rounded_time)
 
         total_workers = self.units(UnitTypeId.SCV).amount + self.already_pending(UnitTypeId.SCV)
         total_marines = self.units(UnitTypeId.MARINE).amount + self.already_pending(UnitTypeId.MARINE)
@@ -39,11 +44,13 @@ class TerranBot(BotAI):
             # postav SUPPLY DEPOT [14] [0:20 ; 0:17] +3
             elif not self.structures(UnitTypeId.SUPPLYDEPOT) and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and total_workers >= 15:
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=close_ramp_depot)
+                print("1st SUPPLY DEPOT built")
 
             # postav BARRACKS [15] [0:44 ; 0:39] +4
             elif not self.structures(UnitTypeId.BARRACKS) and self.already_pending(UnitTypeId.BARRACKS) == 0 and self.can_afford(UnitTypeId.BARRACKS):
                 pos = townhall.position.towards(self.enemy_start_locations[0], 7)
                 await self.build(UnitTypeId.BARRACKS, pos)
+                print("1st BARRACKS built")
 
                 # ADVANCED STRATEGY, POSTAVIT WALLU ZE BARRACKS A SUPPLY DEPOTU NAD RAMPOU (VOJACI NEMUZOU PROJIT)
                 # pos = main_ramp.barracks_in_middle
@@ -53,6 +60,7 @@ class TerranBot(BotAI):
             elif not self.structures(UnitTypeId.REFINERY) and self.structures(UnitTypeId.BARRACKS).amount == 1 and not self.already_pending(UnitTypeId.REFINERY):
                 vespenes = self.vespene_geyser.closer_than(15, townhall)
                 await self.build(UnitTypeId.REFINERY, vespenes.random)
+                print("1st REFINERY built")
 
             # posli SCV do rafinerie
             elif self.structures(UnitTypeId.REFINERY).ready and self.structures(UnitTypeId.REFINERY).ready.first.assigned_harvesters < 3 and not self.structures(UnitTypeId.FACTORYTECHLAB):
@@ -68,6 +76,7 @@ class TerranBot(BotAI):
                         pass
                     else:
                         barracks.build(UnitTypeId.BARRACKSREACTOR)
+                        print("1st BARRACKS REACTOR built")
 
             # postav dalsi COMMAND CENTER [19] [1:44 ; 1:38] +6
             elif self.can_afford(UnitTypeId.COMMANDCENTER) and self.structures(UnitTypeId.BARRACKSREACTOR) and ((self.structures(UnitTypeId.COMMANDCENTER).amount == 1 and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 0) or (self.structures(UnitTypeId.ORBITALCOMMAND).amount == 1 and self.structures(UnitTypeId.COMMANDCENTER).amount == 0)):
@@ -75,14 +84,17 @@ class TerranBot(BotAI):
                 if expansion_location:
                     builder = self.workers.closest_to(expansion_location)
                     builder.build(UnitTypeId.COMMANDCENTER, expansion_location)
+                    print("2nd COMMANDCENTER built")
 
             # vylepsi home COMMAND CENTER na ORBITAL COMMAND [19] [1:46 ; 1:38] +8
             elif not self.structures(UnitTypeId.ORBITALCOMMAND) and self.can_afford(UnitTypeId.ORBITALCOMMAND)  and self.structures(UnitTypeId.COMMANDCENTER).amount == 2:
                 townhall.build(UnitTypeId.ORBITALCOMMAND)
+                print("1st ORBITAL COMMAND built")
 
             # postav SUPPLY DEPOT [19] [1:50 ; 1:47] +3
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount == 1 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and townhall != townhall_2:
                 await self.build(UnitTypeId.SUPPLYDEPOT, far_ramp_depot)
+                print("2nd SUPPLYDEPOT built")
 
             # vycvic 2 MARINES [20]
             elif self.can_afford(UnitTypeId.MARINE) and total_marines < 2 and self.structures(UnitTypeId.BARRACKSREACTOR):
@@ -94,6 +106,7 @@ class TerranBot(BotAI):
             elif not self.structures(UnitTypeId.BUNKER) and self.already_pending(UnitTypeId.BUNKER) == 0 and self.can_afford(UnitTypeId.BUNKER) and total_marines >= 2:
                 pos = townhall_2.position.towards(self.game_info.map_center, 12)
                 await self.build(UnitTypeId.BUNKER, pos)
+                print("1st BUNKER built")
 
             # vycvic 4 MARINES [23]
             elif self.can_afford(UnitTypeId.MARINE) and total_marines < 6 and self.structures(UnitTypeId.BUNKER):
@@ -106,15 +119,18 @@ class TerranBot(BotAI):
                 target_barracks = self.structures(UnitTypeId.BARRACKS).random
                 pos = target_barracks.position.towards(self.enemy_start_locations[0], 5)
                 await self.build(UnitTypeId.BARRACKS, pos)
+                print("2nd BARRACKS built")
 
             elif self.structures(UnitTypeId.BARRACKS).amount == 2 and not self.already_pending(UnitTypeId.BARRACKS) and self.can_afford(UnitTypeId.BARRACKS):
                 target_barracks = self.structures(UnitTypeId.BARRACKS).random
                 pos = target_barracks.position.towards(close_ramp_depot, 5)
                 await self.build(UnitTypeId.BARRACKS, pos)
+                print("3rd BARRACKS built")
 
             # vylepsi second COMMAND CENTER na ORBITAL COMMAND [29] [3:03 ; 2:50] +12
             elif self.can_afford(UnitTypeId.ORBITALCOMMAND) and (self.structures(UnitTypeId.BARRACKS).amount >= 2 or self.structures(UnitTypeId.BARRACKSREACTOR).amount >= 1) and self.structures(UnitTypeId.ORBITALCOMMAND).amount < 2 and not townhall_2.orders:
                 townhall_2.build(UnitTypeId.ORBITALCOMMAND)
+                print("2nd ORBITAL COMMAND built")
 
             # vycvic 4 MARINES [30]
             elif self.can_afford(UnitTypeId.MARINE) and total_marines < 10 and townhall_2.orders and townhall != townhall_2:
@@ -126,6 +142,7 @@ class TerranBot(BotAI):
             elif self.can_afford(UnitTypeId.FACTORY) and not self.structures(UnitTypeId.FACTORY) and self.structures(UnitTypeId.ORBITALCOMMAND).amount == 2 and not self.already_pending(UnitTypeId.FACTORY):
                 pos = townhall_2.position.towards(self.enemy_start_locations[0], 6)
                 await self.build(UnitTypeId.FACTORY, pos)
+                print("1st FACTORY built")
 
             # postav FACTORY TECH LAB [89] [0:00 ; 6:04]
             elif self.can_afford(UnitTypeId.FACTORYTECHLAB) and not self.structures(UnitTypeId.FACTORYTECHLAB) and not self.already_pending(UnitTypeId.FACTORYTECHLAB) and self.structures(UnitTypeId.FACTORY):
@@ -135,6 +152,7 @@ class TerranBot(BotAI):
                         pass
                     else:
                         factory.build(UnitTypeId.FACTORYTECHLAB)
+                        print("1st FACTORY TECH LAB built")
 
             # vycvic 2 SIEGE TANK
             elif self.can_afford(UnitTypeId.SIEGETANK) and self.structures(UnitTypeId.FACTORYTECHLAB) and not self.already_pending(UnitTypeId.SIEGETANK) and total_siegetanks < 2:
@@ -143,7 +161,7 @@ class TerranBot(BotAI):
                     factory.train(UnitTypeId.SIEGETANK)
 
             # udelej 1 nebo 2 SIEGE TANK do defense modu
-            elif self.units(UnitTypeId.SIEGETANK).amount <= 2:
+            elif self.units(UnitTypeId.SIEGETANK).amount == 2 and self.siege_def == False:
                 for siege in self.units(UnitTypeId.SIEGETANK):
                     self.do(siege(AbilityId.SIEGEMODE_SIEGEMODE))
                 self.siege_def = True
@@ -156,10 +174,12 @@ class TerranBot(BotAI):
                         pass
                     else:
                         barracks.build(UnitTypeId.BARRACKSTECHLAB)
+                        print("1st BARRACKS TECH LAB built")
 
             # postav SUPPLY DEPOT [33] [0:00 ; 3:11]
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 3 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.BARRACKSTECHLAB):
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=townhall_2)
+                print("3rd SUPPLY DEPOT built")
 
             # vycvic 2 MARINES [34]
             elif self.can_afford(UnitTypeId.MARINE) and total_marines < 15 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 3:
@@ -175,20 +195,24 @@ class TerranBot(BotAI):
                         pass
                     else:
                         barracks.build(UnitTypeId.BARRACKSTECHLAB)
+                        print("1st BARRACKS TECH LAB built")
 
             # postav 2 SUPPLY DEPOTY [44] [0:00 ; 3:43]
             elif self.structures(UnitTypeId.SUPPLYDEPOT).amount < 5 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.BARRACKSTECHLAB):
                 front_of_base = townhall_2.position.towards(self.game_info.map_center, distance=15)
                 await self.build(UnitTypeId.SUPPLYDEPOT, near=front_of_base)
+                print("4th and 5th SUPPLY DEPOTS built")
 
             # postav 2 RAFINERY [63] [0:00 ; 4:32]
             elif self.structures(UnitTypeId.REFINERY).amount < 3 and self.structures(UnitTypeId.SUPPLYDEPOT).amount == 5 and not self.already_pending(UnitTypeId.REFINERY):
                 vespenes = self.vespene_geyser.closer_than(15, townhall_2)
                 await self.build(UnitTypeId.REFINERY, vespenes.random)
+                print("3rd and 4th REFINERY built")
 
             # postav ENGINEERING BAY [66] [0:00 ; 4:44]
             elif self.can_afford(UnitTypeId.ENGINEERINGBAY) and not self.structures(UnitTypeId.ENGINEERINGBAY) and self.structures(UnitTypeId.REFINERY).amount >= 2 and not self.already_pending(UnitTypeId.ENGINEERINGBAY):
                 await self.build(UnitTypeId.ENGINEERINGBAY, near=townhall_2)
+                print("1st ENGINEERING BAY built")
 
             # postav 2 BARRACKS [70] [0:00 ; 4:57]
             elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 4 and self.structures(UnitTypeId.ENGINEERINGBAY) and not self.already_pending(UnitTypeId.BARRACKS):
@@ -196,15 +220,18 @@ class TerranBot(BotAI):
                 target_barracks = self.structures(UnitTypeId.BARRACKS).furthest_to(self.start_location)
                 pos = target_barracks.position.towards(expansion_location, 5)
                 await self.build(UnitTypeId.BARRACKS, pos)
+                print("2nd BARRACKS built")
 
             elif self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount < 5 and self.structures(UnitTypeId.ENGINEERINGBAY) and not self.already_pending(UnitTypeId.BARRACKS):
                 target_barracks = self.structures(UnitTypeId.BARRACKS).furthest_to(self.start_location)
                 pos = target_barracks.position.towards(close_ramp_depot, 7)
                 await self.build(UnitTypeId.BARRACKS, pos)
+                print("3rd BARRACKS built")
 
             # postav STAR PORT [74] [0:00 ; 5:20]
             elif self.can_afford(UnitTypeId.STARPORT) and not self.structures(UnitTypeId.STARPORT) and not self.already_pending(UnitTypeId.STARPORT) and self.structures(UnitTypeId.BARRACKS).amount >= 5 and self.structures(UnitTypeId.FACTORYTECHLAB):
                 await self.build(UnitTypeId.STARPORT, near=townhall)
+                print("1st STARCRAFT built")
 
             # postav BARRACKS REACTOR
             elif self.structures(UnitTypeId.BARRACKSREACTOR).amount < 2 and not self.already_pending(UnitTypeId.BARRACKSREACTOR) and self.can_afford(UnitTypeId.BARRACKSREACTOR) and self.structures(UnitTypeId.REFINERY).amount >= 2:
@@ -214,6 +241,7 @@ class TerranBot(BotAI):
                         pass
                     else:
                         barracks.build(UnitTypeId.BARRACKSREACTOR)
+                        print("2nd BARRACKS REACTOR built")
 
             # postav BARRACKS TECH LAB
             elif self.structures(UnitTypeId.BARRACKSTECHLAB).amount < 3 and not self.already_pending(UnitTypeId.BARRACKSTECHLAB) and self.can_afford(UnitTypeId.BARRACKSTECHLAB) and self.structures(UnitTypeId.BARRACKSREACTOR).amount >= 2:
@@ -223,6 +251,7 @@ class TerranBot(BotAI):
                         pass
                     else:
                         barracks.build(UnitTypeId.BARRACKSTECHLAB)
+                        print("1st BARRACKS TECH LAB")
 
             # vycvic dalsi MARINES
             elif self.can_afford(UnitTypeId.MARINE) and total_marines < 22 and self.structures(UnitTypeId.BARRACKSTECHLAB).amount >= 3:
@@ -248,8 +277,8 @@ class TerranBot(BotAI):
                 for starport in starport_ready:
                     starport.train(UnitTypeId.MEDIVAC)
 
-            # TIME TO WIN
-            elif self.units(UnitTypeId.SIEGETANK).amount >= 4 and self.units(UnitTypeId.MEDIVAC).amount >= 4 and self.units(UnitTypeId.MARAUDER).amount >= 4:
+            # TIME TO WIN at 9 min. no matter what
+            if self.time >= 540:
                 target = self.enemy_start_locations[0]
                 marines = self.units(UnitTypeId.MARINE)
                 siege_t = self.units(UnitTypeId.SIEGETANK)
@@ -378,31 +407,15 @@ class TerranBot(BotAI):
 
             else:
                 marines = self.units(UnitTypeId.MARINE)
-                siege_t = self.units(UnitTypeId.SIEGETANK)
                 marauders = self.units(UnitTypeId.MARAUDER)
                 medivacs = self.units(UnitTypeId.MEDIVAC)
 
                 for marine in marines:
                     self.do(marine.move(front_of_base))
-                for siege in siege_t:
-                    self.do(siege.move(front_of_base))
                 for marauder in marauders:
                     self.do(marauder.move(front_of_base))
                 for medivac in medivacs:
                     self.do(medivac.smart(front_of_base))
-
-                for marine in marines:
-                    if marine.distance_to(front_of_base) < 1:
-                        self.do(marine.hold_position())
-                for siege in siege_t:
-                    if siege.distance_to(front_of_base) < 1:
-                        self.do(siege.hold_position())
-                for marauder in marauders:
-                    if marauder.distance_to(front_of_base) < 1:
-                        self.do(marauder.hold_position())
-                for medivac in medivacs:
-                    if medivac.distance_to(front_of_base) < 1:
-                        self.do(medivac.hold_position())
 
         # pokud nemame townhall a mame na nej penize, tak ho postav
         else:
